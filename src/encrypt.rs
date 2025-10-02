@@ -53,7 +53,7 @@ pub fn encrypt(
     dh4_deriver.set_peer(&recipient_opk_pkey)?;
     let dh4 = dh4_deriver.derive_to_vec()?;
     
-    let (pq_ciphertext, shared_secret_pq) = kyber::key_controler::KeyControKyber1024::encap(&recipient_pq_pk).unwrap();
+    let (shared_secret_pq, pq_ciphertext) = kyber::key_controler::KeyControKyber1024::encap(&recipient_pq_pk).unwrap();
 
     // --- 5. 최종 세션 키 유도 ---
     let master_secret = [dh1.as_slice(), dh2.as_slice(), dh3.as_slice(), dh4.as_slice(), shared_secret_pq.as_slice()].concat();
@@ -82,7 +82,7 @@ pub fn encrypt(
         sender_identity_key: Bytes(sender_ik_pkey.raw_public_key()?.try_into().map_err(|_| OtpgError::KeyConversionError)?),
         sender_ephemeral_key: Bytes(sender_ephemeral_key.raw_public_key()?.try_into().map_err(|_| OtpgError::KeyConversionError)?),
         opk_id: opk_id,
-        pq_ciphertext: Bytes(pq_ciphertext.try_into().unwrap()),
+        pq_ciphertext: Bytes(pq_ciphertext.try_into().map_err(|_| OtpgError::KeyConversionError)?),
         aead_ciphertext: [nonce.as_slice(), aead_ciphertext.as_slice()].concat(),
     })
 }

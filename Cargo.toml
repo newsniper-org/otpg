@@ -1,0 +1,35 @@
+[package]
+name = "otpg"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+blake3 = { version = "1.8.2", features = ["digest", "pure", "zeroize"] }
+chacha20poly1305 = { version = "0.10.1", features = ["heapless", "stream"] }
+ed448 = "0.5.0-rc.1"
+getrandom = "0.3.3"
+zeroize = { version = "1.8.2", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"], optional = true }
+hmac = { version = "0.12.1", features = ["reset"] }
+sha1-checked = "0.10.0"
+base32 = "0.5.1"
+prost = { version = "0.14.1", features = ["no-recursion-limit"], optional = true }
+ed448-goldilocks = "0.14.0-pre.4"
+rand = { version = "0.9.2", features = ["unbiased"] }
+rand_core = "0.9.3"
+crypt_guard = "1.4.2"
+signature = { version = "3.0.0-rc.4", features = ["rand_core", "digest"] }
+thiserror = "2.0.17"
+bincode = "2.0.1"
+elliptic-curve = { version = "0.13.8", features = ["digest", "ecdh"] }
+openssl = { version = "0.10.73", features = ["bindgen"] }
+totp-rs = { version = "5.7.0", features = ["zeroize", "rand", "gen_secret"] }
+chrono = "0.4.42"
+
+[features]
+wasm-bindgen = ["getrandom/wasm_js", "blake3/wasm32_simd"]
+serde = ["zeroize/serde", "blake3/serde", "dep:serde", "rand/serde", "rand_core/serde", "bincode/serde", "ed448-goldilocks/serde", "elliptic-curve/serde", "chrono/serde", "totp-rs/serde", "totp-rs/serde_support", "chrono/serde"]
+simd = ["zeroize/simd"]
+prost = ["serde", "dep:prost"]
+default = ["prost", "simd"]
+vendored-openssl = ["openssl/vendored"]

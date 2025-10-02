@@ -18,6 +18,16 @@ pub(crate) const XCHACHA20_NONCE_LEN: usize = 24; // 192 bits
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Bytes<const LEN: usize>(pub(crate) [u8; LEN]);
 
+impl<const LEN: usize> Bytes<LEN> {
+    pub fn inner_ref(&self) -> &[u8; LEN] {
+        &self.0
+    }
+    
+    pub fn inner_ref_as_slice(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+}
+
 impl<const LEN: usize> Serialize for Bytes<LEN> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

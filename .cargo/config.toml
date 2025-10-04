@@ -1,0 +1,4 @@
+# 릴리즈 빌드 시 Link-Time Optimization(LTO) 활성화 (선택 사항)
+[profile.release]
+lto = "fat"
+codegen-units = 1

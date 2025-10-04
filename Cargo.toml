@@ -28,8 +28,11 @@ chrono = "0.4.42"
 
 [features]
 wasm-bindgen = ["getrandom/wasm_js", "blake3/wasm32_simd"]
-serde = ["zeroize/serde", "blake3/serde", "dep:serde", "rand/serde", "rand_core/serde", "bincode/serde", "ed448-goldilocks/serde", "elliptic-curve/serde", "chrono/serde", "totp-rs/serde", "totp-rs/serde_support", "chrono/serde"]
+serde = ["zeroize/serde", "blake3/serde", "dep:serde", "rand/serde", "rand_core/serde", "bincode/serde", "ed448-goldilocks/serde", "elliptic-curve/serde", "chrono/serde", "totp-rs/serde", "totp-rs/serde_support"]
 simd = ["zeroize/simd"]
 prost = ["serde", "dep:prost"]
 default = ["prost", "simd"]
 vendored-openssl = ["openssl/vendored"]
+
+[patch.crates-io]
+signature = {git = "https://github.com/newsniper-org/rustcrypto-traits", branch = "hotfix/nightly-2024-12-07-compat"}

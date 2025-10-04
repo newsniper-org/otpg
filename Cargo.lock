@@ -1800,8 +1800,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "signature"
 version = "3.0.0-rc.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc280a6ff65c79fbd6622f64d7127f32b85563bca8c53cd2e9141d6744a9056d"
+source = "git+https://github.com/newsniper-org/rustcrypto-traits?branch=hotfix%2Fnightly-2024-12-07-compat#5f515dd4e8d38ba84708bc0136d430b5b1f2d30d"
 dependencies = [
  "digest 0.11.0-rc.3",
  "rand_core 0.9.3",

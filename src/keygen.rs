@@ -36,7 +36,7 @@ pub fn generate_keys(num_opks: u32) -> Result<(PublicKeyBundle, PrivateKeyVault)
     // --- 2. 사전 키 서명 ---
     let signature = ik_sig.sign(&spk_pk_bytes);
 
-    let mut ik_pq_pk_bytes: [u8; KYBER1024_PUBLIC_KEY_LEN] = [0u8; _];
+    let mut ik_pq_pk_bytes: [u8; KYBER1024_PUBLIC_KEY_LEN] = [0u8; KYBER1024_PUBLIC_KEY_LEN];
     ik_pq_pk_bytes.clone_from_slice(&ik_pq_pk[..KYBER1024_PUBLIC_KEY_LEN]);
 
     // --- 3. PublicKeyBundle 조립 ---

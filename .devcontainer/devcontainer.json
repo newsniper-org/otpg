@@ -1,0 +1,35 @@
+{
+  "name": "OTPG Formal Verification (Coq)",
+
+  // Dockerfile을 직접 빌드하도록 설정
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+
+  // 컨테이너가 생성된 후 실행할 명령어
+  // 예: Rust 의존성 미리 다운로드
+  "postCreateCommand": "cargo fetch",
+
+  // VS Code가 컨테이너에 접속할 때 사용할 사용자
+  // Dockerfile에서 생성한 'vscode' 사용자를 지정
+  "remoteUser": "coq",
+
+  // VS Code가 프로젝트 폴더를 마운트하고 열 위치
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/coq/work,type=bind,consistency=cached",
+  "workspaceFolder": "/home/coq/work",
+
+  // 컨테이너에 자동으로 설치할 VS Code 확장 프로그램
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "coq-community.vscoq",          // Coq 지원
+        "rust-lang.rust-analyzer",      // Rust 지원
+        "tamasfe.even-better-toml"      // Cargo.toml 지원
+      ]
+    }
+  },
+
+  // Rust Analyzer와의 호환성을 위한 설정
+  "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"]
+}

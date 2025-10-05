@@ -2,8 +2,9 @@
 mod tests {
     use chacha20poly1305::aead::Aead;
     use chacha20poly1305::KeyInit;
-    use otpg_contrib::cipher::{Kyber1024KEM, X448KeyAgreement, BLAKE3KDF};
+    use otpg_contrib::cipher::{ED448Signer, Kyber1024KEM, X448KeyAgreement, BLAKE3KDF};
     use otpg_contrib::{auth::TotpRsVerifier, cipher::XChaCha20Poly1305Cipher};
+    use otpg_core::constants::XCHACHA20_NONCE_LEN;
     use otpg_core::error::OtpgError;
     use otpg_core::keygen;
     use otpg_core::encrypt;
@@ -23,9 +24,10 @@ mod tests {
 
     #[test]
     fn test_happy_path_roundtrip() {
+        let mut rng = rand::rng();
         // --- 1. 설정: 앨리스와 밥의 키 생성 ---
-        let (alice_pub, alice_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap();
-        let (_bob_pub, bob_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap();
+        let (alice_pub, alice_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap();
+        let (_bob_pub, bob_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap();
         
         // 1단계(인증)를 통과했다고 가정하고, 밥의 개인키를 미리 복호화/역직렬화.
         // 실제 앱에서는 이 부분이 OTP 인증 후에 발생. 테스트를 위해 수동으로 수행.
@@ -34,7 +36,7 @@ mod tests {
         let original_plaintext = b"The crow flies at midnight.";
 
         // --- 2. 실행: 밥이 앨리스에게 암호화 ---
-        let ciphertext_bundle = encrypt::encrypt::<XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
+        let ciphertext_bundle = encrypt::encrypt::<XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
             &bob_keys,
             &alice_pub,
             original_plaintext,
@@ -43,8 +45,8 @@ mod tests {
         // --- 3. 실행: 앨리스가 유효한 OTP로 복호화 ---
         // 현재 Unix 타임스탬프를 가져옵니다.
         let current_timestamp = chrono::Utc::now().timestamp() as u64;
-        let valid_otp = generate_valid_otp(alice_vault.authentication.s_otp.inner_ref_as_slice());
-        let decryption_result = decrypt::decrypt::<TotpRsVerifier, BincodeDeserializer, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
+        let valid_otp = generate_valid_otp(&alice_vault.authentication.s_otp);
+        let decryption_result = decrypt::decrypt::<TotpRsVerifier, BincodeDeserializer, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
             &TotpRsVerifier,
             &alice_vault,
             &valid_otp,
@@ -59,17 +61,18 @@ mod tests {
 
     #[test]
     fn test_decrypt_with_wrong_otp() {
+        let mut rng = rand::rng();
         // --- 1. 설정 ---
-        let (alice_pub, alice_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap();
-        let (_bob_pub, bob_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap();
+        let (alice_pub, alice_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap();
+        let (_bob_pub, bob_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap();
         let bob_keys = unlock_private_keys_for_test(&bob_vault).unwrap();
-        let ciphertext_bundle = encrypt::encrypt::<XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(&bob_keys, &alice_pub, b"test").unwrap();
+        let ciphertext_bundle = encrypt::encrypt::<XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(&bob_keys, &alice_pub, b"test").unwrap();
 
         // --- 2. 실행: 잘못된 OTP로 복호화 시도 ---
         let wrong_otp = "000000";
         // 현재 Unix 타임스탬프를 가져옵니다.
         let current_timestamp = chrono::Utc::now().timestamp() as u64;
-        let decryption_result = decrypt::decrypt::<TotpRsVerifier, BincodeDeserializer, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
+        let decryption_result = decrypt::decrypt::<TotpRsVerifier, BincodeDeserializer, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
             &TotpRsVerifier,
             &alice_vault,
             wrong_otp,
@@ -84,20 +87,21 @@ mod tests {
 
     #[test]
     fn test_decrypt_with_wrong_keys() {
+        let mut rng = rand::rng();
         // --- 1. 설정: 앨리스, 밥, 찰리 키 생성 ---
-        let (alice_pub, _alice_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap();
-        let (_bob_pub, bob_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap();
+        let (alice_pub, _alice_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap();
+        let (_bob_pub, bob_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap();
         let bob_keys = unlock_private_keys_for_test(&bob_vault).unwrap();
-        let (_charlie_pub, charlie_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap(); // 찰리의 키
+        let (_charlie_pub, charlie_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap(); // 찰리의 키
         
         // 밥이 앨리스에게 메시지 암호화
-        let bundle_for_alice = encrypt::encrypt::<XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(&bob_keys, &alice_pub, b"test").unwrap();
+        let bundle_for_alice = encrypt::encrypt::<XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(&bob_keys, &alice_pub, b"test").unwrap();
         
         // --- 2. 실행: 찰리가 앨리스를 위한 메시지를 자신의 키로 복호화 시도 ---
-        let valid_otp_charlie = generate_valid_otp(charlie_vault.authentication.s_otp.inner_ref_as_slice());
+        let valid_otp_charlie = generate_valid_otp(&charlie_vault.authentication.s_otp);
         // 현재 Unix 타임스탬프를 가져옵니다.
         let current_timestamp = chrono::Utc::now().timestamp() as u64;
-        let decryption_result = decrypt::decrypt::<TotpRsVerifier, BincodeDeserializer, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
+        let decryption_result = decrypt::decrypt::<TotpRsVerifier, BincodeDeserializer, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
             &TotpRsVerifier,
             &charlie_vault,
             &valid_otp_charlie,
@@ -113,20 +117,21 @@ mod tests {
 
     #[test]
     fn test_decrypt_with_tampered_ciphertext() {
+        let mut rng = rand::rng();
         // --- 1. 설정 ---
-        let (alice_pub, alice_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap();
-        let (_bob_pub, bob_vault) = keygen::generate_keys::<Kyber1024KEM, X448KeyAgreement>(10).unwrap();
+        let (alice_pub, alice_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap();
+        let (_bob_pub, bob_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher,Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF, ED448Signer, _>(10, &mut rng).unwrap();
         let bob_keys = unlock_private_keys_for_test(&bob_vault).unwrap();
-        let mut bundle = encrypt::encrypt::<XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(&bob_keys, &alice_pub, b"test").unwrap();
+        let mut bundle = encrypt::encrypt::<XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(&bob_keys, &alice_pub, b"test").unwrap();
 
         // --- 2. 실행: 암호문 1바이트 변조 ---
         let last_byte_index = bundle.aead_ciphertext.len() - 1;
         bundle.aead_ciphertext[last_byte_index] ^= 0x01; // 마지막 바이트의 1비트를 뒤집음
 
-        let valid_otp = generate_valid_otp(alice_vault.authentication.s_otp.inner_ref_as_slice());
+        let valid_otp = generate_valid_otp(&alice_vault.authentication.s_otp);
         // 현재 Unix 타임스탬프를 가져옵니다.
         let current_timestamp = chrono::Utc::now().timestamp() as u64;
-        let decryption_result = decrypt::decrypt::<TotpRsVerifier, BincodeDeserializer, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
+        let decryption_result = decrypt::decrypt::<TotpRsVerifier, BincodeDeserializer, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, Kyber1024KEM, X448KeyAgreement, 32, BLAKE3KDF>(
             &TotpRsVerifier,
             &alice_vault,
             &valid_otp,
@@ -154,14 +159,14 @@ mod tests {
         // 실제 decrypt 함수 1.2 단계와 동일합니다.
         let kek = blake3::derive_key(
             &vault.authentication.kdf_context,
-            vault.authentication.s_otp.inner_ref_as_slice(),
+            &vault.authentication.s_otp
         );
 
         // 2. 개인키 데이터 복호화 (AEAD)
         // 실제 decrypt 함수 1.3 단계와 동일합니다.
         let cipher = chacha20poly1305::XChaCha20Poly1305::new(kek.as_slice().into());
         let plaintext_bytes = cipher.decrypt(
-            vault.encrypted_data.nonce.inner_ref_as_slice().into(),
+            vault.encrypted_data.nonce.as_slice().into(),
             vault.encrypted_data.ciphertext.as_slice()
         ).map_err(|_| otpg_core::error::OtpgError::AeadError)?;
 

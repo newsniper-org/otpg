@@ -13,3 +13,8 @@ rand.workspace = true
 crypt_guard.workspace = true
 openssl.workspace = true
 blake3.workspace = true
+ed448-goldilocks.workspace = true
+ed448.workspace = true
+
+[features]
+wasm-bindgen = ["getrandom/wasm_js", "blake3/wasm32_simd"]

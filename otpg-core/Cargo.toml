@@ -4,9 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-blake3.workspace = true
-chacha20poly1305.workspace = true
-ed448.workspace = true
 getrandom.workspace = true
 zeroize.workspace = true
 serde = { version = "1.0.228", features = ["derive"], optional = true }
@@ -14,7 +11,6 @@ hmac.workspace = true
 sha1-checked.workspace = true
 base32.workspace = true
 prost = { version = "0.14.1", features = ["no-recursion-limit"], optional = true }
-ed448-goldilocks.workspace = true
 rand.workspace = true
 rand_core.workspace = true
 signature.workspace = true
@@ -30,8 +26,8 @@ hax-lib = { git = "https://github.com/hacspec/hax", version = "0.3.5" }
 
 
 [features]
-wasm-bindgen = ["getrandom/wasm_js", "blake3/wasm32_simd"]
-serde = ["zeroize/serde", "blake3/serde", "dep:serde", "rand/serde", "rand_core/serde", "bincode/serde", "ed448-goldilocks/serde", "elliptic-curve/serde"]
+wasm-bindgen = ["getrandom/wasm_js"]
+serde = ["zeroize/serde", "dep:serde", "rand/serde", "rand_core/serde", "bincode/serde", "elliptic-curve/serde"]
 simd = ["zeroize/simd"]
 prost = ["serde", "dep:prost"]
 default = ["serde", "simd"]

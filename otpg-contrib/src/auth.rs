@@ -1,6 +1,8 @@
-use otpg_core::auth::OtpVerifier;
+use otpg_core::{auth::OtpVerifier, types::GetContextStr};
 
 pub struct TotpRsVerifier;
+
+
 
 impl OtpVerifier for TotpRsVerifier {
     fn verify(&self, code: &str, s_otp: &[u8], timestamp: u64) -> bool {
@@ -14,5 +16,15 @@ impl OtpVerifier for TotpRsVerifier {
             Err(_) => return false,
         };
         totp.check(code, timestamp)
+    }
+    
+    fn gen_s_otp<R : rand::CryptoRng + ?Sized>(rng: &mut R) -> [u8; 20] {
+        crate::gen_bytearr(rng)
+    }
+}
+
+impl GetContextStr for TotpRsVerifier{
+    fn get_context_str() -> &'static str {
+        "TOTP"
     }
 }

@@ -1,73 +1,48 @@
 // src/keygen.rs
 
-use crate::cipher::{KeyAgreement, PostQuantumKEM};
-use crate::constants::*;
-use crate::error::{OtpgError, Result};
+use rand::{CryptoRng};
+
+use crate::auth::OtpVerifier;
+use crate::cipher::{AeadCipher, KeyAgreement, OneTimePrekeysPairGen, PostQuantumKEM, KDF};
+use crate::error::{Result};
 use crate::types::{
-    AuthenticationVault, Bytes as BytesWrapper, EncryptedData, PrivateKeyBundle, PrivateKeyVault, PublicKeyBundle, SignedPreKey
+    AuthenticationVault, EncryptedData, GetContextStr, PrivateKeyBundle, PrivateKeyVault, PublicKeyBundle, SignedPreKey
 };
-use chacha20poly1305::{
-    aead::{Aead, KeyInit},
-    XChaCha20Poly1305,
-};
-use ed448::signature::Signer;
-use std::collections::HashMap;
-use openssl::pkey::{PKey, Private}; // OpenSSL PKey 사용
 
 use crate::conditional_serde;
 
 /// OTPG를 위한 새로운 키 쌍과 개인키 저장소를 생성합니다.
-pub fn generate_keys<PQ: PostQuantumKEM, KA: KeyAgreement>(num_opks: u32) -> Result<(PublicKeyBundle, PrivateKeyVault)> {
-    let mut rng = rand::rng();
-    // --- 1. 모든 키 쌍 생성 ---
-    let ik_sig = ed448_goldilocks::SigningKey::generate(&mut rng);
+pub fn generate_keys<V: OtpVerifier + GetContextStr, const NONCE_LEN: usize, C: AeadCipher<NONCE_LEN> + GetContextStr, PQ: PostQuantumKEM, KA: KeyAgreement + OneTimePrekeysPairGen, const DERIVED_KEY_LEN: usize, KD: KDF<DERIVED_KEY_LEN> + GetContextStr, S: crate::cipher::Signer, R: CryptoRng + ?Sized>(num_opks: u32, rng: &mut R) -> Result<(PublicKeyBundle, PrivateKeyVault)> {
     // 장기 신원 키 (IK_KX)
     let (ik_kx_pk_bytes, ik_kx_sk_bytes) = KA::generate_keypair();
     let (ik_pq_pk, ik_pq_sk) = PQ::generate_keypair();
     // 서명된 사전 키 (SPK)
     let (spk_pk_bytes, spk_sk_bytes) = KA::generate_keypair();
 
-    let opks: HashMap<u32, PKey<Private>> = (0..num_opks)
-        .map(|id| (id, PKey::generate_x448().unwrap()))
-        .collect();
+    let (opks_pub, opks_prv) = KA::gen_opkspair(num_opks);
 
     // --- 2. 사전 키 서명 ---
-    let signature = ik_sig.sign(&spk_pk_bytes);
-
-    let mut ik_pq_pk_bytes: [u8; KYBER1024_PUBLIC_KEY_LEN] = [0u8; KYBER1024_PUBLIC_KEY_LEN];
-    ik_pq_pk_bytes.clone_from_slice(&ik_pq_pk[..KYBER1024_PUBLIC_KEY_LEN]);
+    let (ik_sig, signature) = S::sign(&spk_pk_bytes, rng);
 
     // --- 3. PublicKeyBundle 조립 ---
     let public_bundle = PublicKeyBundle {
         version: (1, 0),
-        identity_key: BytesWrapper(ik_kx_pk_bytes.try_into().unwrap()),
-        identity_key_pq: BytesWrapper(ik_pq_pk_bytes),
+        identity_key: ik_kx_pk_bytes,
+        identity_key_pq: ik_pq_pk,
         signed_prekey: SignedPreKey {
-            key: BytesWrapper(spk_pk_bytes.try_into().unwrap()),
-            signature: BytesWrapper(signature.to_bytes()),
+            key: spk_pk_bytes,
+            signature: signature,
         },
-        one_time_prekeys: opks
-            .iter()
-            .map(|(id, sk)| {
-                (*id, BytesWrapper(sk.raw_public_key().unwrap().try_into().unwrap()))
-            })
-            .collect(),
+        one_time_prekeys: opks_pub
     };
-    let mut tmp: [u8; KYBER1024_SECRET_KEY_LEN] = [0u8; KYBER1024_SECRET_KEY_LEN];
-    tmp.clone_from_slice(&ik_pq_sk[..KYBER1024_SECRET_KEY_LEN]);
 
     // --- 4. S_OTP 생성 및 개인키 암호화 ---
     let private_bundle = PrivateKeyBundle {
-        identity_key_sig: BytesWrapper(ik_sig.to_bytes().into()),
-        identity_key_kx: BytesWrapper(ik_kx_sk_bytes.try_into().unwrap()),
-        identity_key_pq: BytesWrapper(tmp),
-        signed_prekey: BytesWrapper(spk_sk_bytes.try_into().unwrap()),
-        one_time_prekeys: opks
-            .iter()
-            .map(|(id, sk)| {
-                (*id, BytesWrapper(sk.raw_private_key().unwrap().try_into().unwrap()))
-            })
-            .collect(),
+        identity_key_sig: ik_sig,
+        identity_key_kx: ik_kx_sk_bytes,
+        identity_key_pq: ik_pq_sk,
+        signed_prekey: spk_sk_bytes,
+        one_time_prekeys: opks_prv
     };
 
     conditional_serde!(
@@ -78,32 +53,30 @@ pub fn generate_keys<PQ: PostQuantumKEM, KA: KeyAgreement>(num_opks: u32) -> Res
         or_else_hax Result::<Vec<u8>>::Ok(Vec::<u8>::new()) // hax 환경에서는 빈 벡터를 사용합니다.
     );
 
-    let mut s_otp = [0u8; S_OTP_LEN];
-    rand::fill(&mut s_otp);
-    let kek = blake3::derive_key("otpg-key-wrapping-v1", &s_otp);
+    let s_otp = V::gen_s_otp(rng);
+    let kek = KD::derive_key("otpg-key-wrapping-v1", &s_otp);
 
-    let mut nonce = [0u8; XCHACHA20_NONCE_LEN];
-    rand::fill(&mut nonce);
-    let cipher = XChaCha20Poly1305::new(&kek.into());
+    let nonce = C::gen_nonce(rng);
     conditional_serde!(
-        let ciphertext = cipher.encrypt(
-            &nonce.into(),
+        let ciphertext = C::encrypt(
+            &kek,
+            &nonce,
             serialized_private_keys.unwrap().as_slice()
-        ).map_err(|_| OtpgError::AeadError),
-        or_else_hax Result::<Vec<u8>>::Ok(Vec::<u8>::new()) // hax 환경에서는 빈 벡터를 사용합니다.
+        )?,
+        or_else_hax Vec::<u8>::new() // hax 환경에서는 빈 벡터를 사용합니다.
     );
 
     // --- 5. PrivateKeyVault 조립 ---
     let private_vault = PrivateKeyVault {
         version: (1, 0),
         authentication: AuthenticationVault {
-            method: "TOTP-BLAKE3-XCHACHA20POLY1305".to_string(),
-            s_otp: BytesWrapper(s_otp),
+            method: format!("{0}-{1}-{2}", V::get_context_str(), KD::get_context_str(), C::get_context_str()),
+            s_otp: s_otp.to_vec(),
             kdf_context: "otpg-key-wrapping-v1".to_string(),
         },
         encrypted_data: EncryptedData {
-            nonce: BytesWrapper(nonce),
-            ciphertext: ciphertext.unwrap(),
+            nonce: nonce.to_vec(),
+            ciphertext: ciphertext,
         },
     };
 

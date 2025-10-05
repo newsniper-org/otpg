@@ -22,7 +22,7 @@ mod real {
         AuthenticationError,
 
         #[error("Ed448 signature error: {0}")]
-        SignatureError(#[from] ed448::signature::Error),
+        SignatureError(#[from] signature::Error),
 
         #[error("OpenSSL error: {0}")]
         OpenSSLError(#[from] openssl::error::ErrorStack),

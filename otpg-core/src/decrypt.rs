@@ -9,7 +9,7 @@ use crate::serialization::BundleDeserializer;
 
 
 /// 수신자의 개인키 저장소와 OTP 코드, 그리고 암호화된 메시지 묶음을 사용하여 원본 메시지를 복호화합니다.
-pub fn decrypt<V: OtpVerifier, D: BundleDeserializer, C: AeadCipher, PQ: PostQuantumKEM, KA: KeyAgreement, const DERIVED_KEY_LEN: usize, KD: KDF<DERIVED_KEY_LEN>>(
+pub fn decrypt<V: OtpVerifier, D: BundleDeserializer, const NONCE_LEN: usize, C: AeadCipher<NONCE_LEN>, PQ: PostQuantumKEM, KA: KeyAgreement, const DERIVED_KEY_LEN: usize, KD: KDF<DERIVED_KEY_LEN>>(
     verifier: &V, // "OtpVerifier 역할을 할 수 있는 무언가"를 인자로 받음
     recipient_vault: &PrivateKeyVault,
     otp_code: &str, // 사용자가 입력한 6자리 OTP 코드
@@ -20,17 +20,17 @@ pub fn decrypt<V: OtpVerifier, D: BundleDeserializer, C: AeadCipher, PQ: PostQua
     // --- 1단계: 인증 및 개인키 저장소(Vault) 잠금 해제 ---
 
     // 1.1. OTP 코드 검증
-    if !verifier.verify(otp_code, &recipient_vault.authentication.s_otp.0, current_timestamp) {
+    if !verifier.verify(otp_code, &recipient_vault.authentication.s_otp, current_timestamp) {
         // 사용자가 입력한 코드가 유효하지 않으면, 즉시 에러를 반환하고 종료.
         return Err(OtpgError::AuthenticationError); // 에러 타입 추가 필요
     }
 
     // 1.2. KEK(키 암호화 키) 재유도
     let kek = KD::derive_key(&recipient_vault.authentication.kdf_context,
-        &recipient_vault.authentication.s_otp.0);
+        &recipient_vault.authentication.s_otp);
     
     // 1.3. 개인키 데이터 복호화 (AEAD)
-    let plaintext_bytes = C::decrypt(kek.as_slice(), &recipient_vault.encrypted_data.nonce.0.as_slice(),
+    let plaintext_bytes = C::decrypt(kek.as_slice(), &recipient_vault.encrypted_data.nonce,
         recipient_vault.encrypted_data.ciphertext.as_slice())?;
 
     // 1.4. 개인키 묶음 역직렬화
@@ -43,7 +43,7 @@ pub fn decrypt<V: OtpVerifier, D: BundleDeserializer, C: AeadCipher, PQ: PostQua
     let pq_ciphertext = bundle.pq_ciphertext.clone();
     
     // 2.3. 양자내성 KEM 연산 (디캡슐화)
-    let shared_secret_pq = PQ::decap(&recipient_pq_sk.0, &pq_ciphertext.0).unwrap();
+    let shared_secret_pq = PQ::decap(&recipient_pq_sk, &pq_ciphertext).unwrap();
 
     // --- 3단계: 최종 세션 키 재유도 ---
     // Encrypt 함수와 *정확히* 같은 순서로 공유 비밀들을 결합
@@ -58,7 +58,7 @@ pub fn decrypt<V: OtpVerifier, D: BundleDeserializer, C: AeadCipher, PQ: PostQua
     // 4.2. 부가 인증 데이터(AD) 재구성 (Encrypt 함수와 *정확히* 같게!)
     // 수신자의 장기 공개키는 개인키로부터 유도해야 함
     let associated_data = [
-        bundle.sender_identity_key.0.as_slice(),
+        bundle.sender_identity_key.as_slice(),
         recipient_ik_pub_bytes.as_slice(),
     ].concat();
     let plaintext = C::decrypt_aead(session_key.as_slice(), &bundle.aead_ciphertext, &associated_data)?;

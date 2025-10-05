@@ -11,3 +11,4 @@ totp-rs.workspace = true
 chrono.workspace = true
 blake3.workspace = true
 bincode.workspace = true
+rand.workspace = true

@@ -204,7 +204,6 @@ dependencies = [
  "cfg-if",
  "constant_time_eq",
  "digest 0.10.7",
- "serde",
  "zeroize",
 ]
 
@@ -642,8 +641,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812bad302d88d3e1774df473dffc64f18fedc4be6b6066c470ae3c733b9f9765"
 dependencies = [
  "pkcs8 0.11.0-rc.7",
- "serde",
- "serde_bytes",
  "signature",
 ]
 
@@ -1323,6 +1320,8 @@ dependencies = [
  "blake3",
  "chacha20poly1305",
  "crypt_guard",
+ "ed448",
+ "ed448-goldilocks",
  "getrandom 0.3.3",
  "openssl",
  "otpg-core",
@@ -1338,10 +1337,6 @@ dependencies = [
  "aead",
  "base32",
  "bincode",
- "blake3",
- "chacha20poly1305",
- "ed448",
- "ed448-goldilocks",
  "elliptic-curve 0.13.8",
  "getrandom 0.3.3",
  "hax-lib",
@@ -1367,6 +1362,7 @@ dependencies = [
  "chrono",
  "otpg-contrib",
  "otpg-core",
+ "rand 0.9.2",
  "totp-rs",
 ]
 
@@ -1795,16 +1791,6 @@ checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
 dependencies = [
  "serde_core",
  "serde_derive",
-]
-
-[[package]]
-name = "serde_bytes"
-version = "0.11.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5d440709e79d88e51ac01c4b72fc6cb7314017bb7da9eeff678aa94c10e3ea8"
-dependencies = [
- "serde",
- "serde_core",
 ]
 
 [[package]]

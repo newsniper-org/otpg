@@ -66,3 +66,14 @@ pub fn decrypt<V: OtpVerifier, D: BundleDeserializer, const NONCE_LEN: usize, C:
     // --- 5단계: 평문(Plaintext) 반환 ---
     Ok(plaintext)
 }
+
+#[cfg(hax)]
+pub fn decrypt_to_verify<V : OtpVerifier>(
+    verifier: V, // "OtpVerifier 역할을 할 수 있는 무언가"를 인자로 받음
+    recipient_vault: &PrivateKeyVault,
+    otp_code: &str, // 사용자가 입력한 6자리 OTP 코드
+    bundle: &CiphertextBundle,
+    current_timestamp: u64,
+) -> Result<Vec<u8>> {
+    todo!()
+}

@@ -1,5 +1,7 @@
 /target
-**/proofs/fstar/extraction/
-!**/proofs/fstar/extraction/Makefile
-.fstar-cache
-.cache.boot
+otpg-core/proofs/fstar/extraction/*
+!otpg-core/proofs/fstar/extraction/Makefile
+otpg-contrib/proofs/fstar/extraction/*
+!otpg-contrib/proofs/fstar/extraction/Makefile
+.fstar-cache/
+.cache.boot/

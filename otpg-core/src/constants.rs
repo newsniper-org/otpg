@@ -3,6 +3,7 @@
 // --- 공개키 관련 상수 ---
 pub const X448_PUBLIC_KEY_LEN: usize = 56;
 pub const ED448_SIGNATURE_LEN: usize = 114;
+pub const ED448_SECRET_KEY_LEN: usize = 57;
 pub const KYBER1024_PUBLIC_KEY_LEN: usize = 1568;
 pub const KYBER1024_SECRET_KEY_LEN: usize = 3168;
 

@@ -8,3 +8,9 @@ pub mod keygen;
 pub mod encrypt;
 pub mod decrypt;
 pub mod auth;
+
+pub mod serialization;
+
+pub(crate) mod macros;
+
+pub mod cipher;

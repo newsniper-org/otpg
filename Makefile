@@ -18,7 +18,7 @@ clean-%-proofs:
 	rm -f $(patsubst clean-%-proofs,otpg-%,$@)/proofs/fstar/extraction/.depend
 	rm -f $(patsubst clean-%-proofs,otpg-%,$@)/proofs/fstar/extraction/hax.fst.config.json
 
-clean-proofs: clean-core-proofs clean-contrib-proofs
+clean-proofs: clean-core-proofs
 	rm -rfd .fstar-cache
 	rm -rfd .cache.boot
 

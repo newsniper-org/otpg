@@ -1,2 +1,5 @@
 /target
-tmp/**/*
+**/proofs/fstar/extraction/
+!**/proofs/fstar/extraction/Makefile
+.fstar-cache
+.cache.boot

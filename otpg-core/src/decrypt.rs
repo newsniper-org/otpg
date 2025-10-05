@@ -6,23 +6,25 @@ use crypt_guard::kyber;
 use openssl::derive::Deriver;
 use openssl::pkey::{Id, PKey};
 
-use crate::auth::verify_totp;
+use crate::auth::{OtpVerifier};
 use crate::constants::XCHACHA20_NONCE_LEN;
 use crate::error::{OtpgError, Result};
 use crate::types::{PrivateKeyVault, CiphertextBundle, PrivateKeyBundle};
 // ... 필요한 다른 use 구문들 ...
 
 /// 수신자의 개인키 저장소와 OTP 코드, 그리고 암호화된 메시지 묶음을 사용하여 원본 메시지를 복호화합니다.
-pub fn decrypt(
+pub fn decrypt<V: OtpVerifier>(
+    verifier: &V, // "OtpVerifier 역할을 할 수 있는 무언가"를 인자로 받음
     recipient_vault: &PrivateKeyVault,
     otp_code: &str, // 사용자가 입력한 6자리 OTP 코드
     bundle: &CiphertextBundle,
+    current_timestamp: u64,
 ) -> Result<Vec<u8>> {
 
     // --- 1단계: 인증 및 개인키 저장소(Vault) 잠금 해제 ---
 
     // 1.1. OTP 코드 검증
-    if !verify_totp(otp_code, &recipient_vault.authentication.s_otp.0) {
+    if !verifier.verify(otp_code, &recipient_vault.authentication.s_otp.0, current_timestamp) {
         // 사용자가 입력한 코드가 유효하지 않으면, 즉시 에러를 반환하고 종료.
         return Err(OtpgError::AuthenticationError); // 에러 타입 추가 필요
     }

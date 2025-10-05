@@ -48,7 +48,7 @@ impl<'de, const LEN: usize> Deserialize<'de> for Bytes<LEN> {
                     inner_result.clone_from_slice(&parsed);
                     Ok(Self(inner_result))
                 } else {
-                    Err(serde::de::Error::invalid_length(parsed.len(), &"wrong signed prekey length"))
+                    Err(serde::de::Error::custom("wrong signed prekey length"))
                 }
             },
             Err(e) => Err(e)

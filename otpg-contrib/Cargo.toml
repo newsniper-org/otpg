@@ -1,0 +1,8 @@
+[package]
+name = "otpg-contrib"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+totp-rs.workspace = true
+otpg-core = {path = "../otpg-core"}

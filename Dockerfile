@@ -1,19 +1,19 @@
 # Dockerfile (Coq 공식 이미지 기반)
 
-# 1. Coq 공식 이미지를 베이스로 사용합니다.
-# 이 이미지에는 opam, ocaml, coq가 이미 설치 및 설정되어 있습니다.
-FROM coqorg/coq:8.20-native-flambda
-
+# 1. opam 공식 이미지를 베이스로 사용합니다.
+FROM ocaml/opam:ubuntu-24.04-ocaml-5.3
 # 2. 루트 사용자로 전환하여 시스템 패키지를 설치합니다.
 USER root
+WORKDIR /root
 
 # 3. 시스템 의존성 및 기타 도구 설치
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     git \
+    curl \
     wget \
     build-essential \
     m4 \
+    unzip libssl-dev libclang-dev libgmp-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Typst 설치
@@ -22,25 +22,26 @@ RUN wget https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-u
     mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/ && \
     rm -rf typst*
 
-# 4. 기본 사용자인 'coq'로 다시 전환합니다.
-USER coq
-WORKDIR /home/coq
+# 4. 기본 사용자인 'opam'로 다시 전환합니다.
+USER opam
+WORKDIR /home/opam
 
-# 5. Rust 설치
+# 5. Rust 및 Z3 설치
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/home/coq/.cargo/bin:${PATH}"
+COPY get_fstar_z3.sh .
+RUN sudo chmod +x get_fstar_z3.sh
+RUN sudo ./get_fstar_z3.sh /usr/local/bin
+ENV PATH="/home/opam/.cargo/bin:${PATH}"
 
-# 6. coq-of-rust 설치
-# Coq 환경이 이미 준비되어 있으므로, 소스 코드 빌드 및 설치만 진행합니다.
-RUN ulimit -s unlimited && git clone https://github.com/formal-land/coq-of-rust.git \
-    && cd coq-of-rust \
-    && eval $(opam env) \
-    && cargo install --path lib/ \
-    && cd CoqOfRust \
-    && opam install . --deps-only -y && make
+# 6. fstar 설치
+RUN ulimit -s unlimited && eval $(opam env) && opam install fstar
 
-# 7. 작업 디렉터리 설정
-WORKDIR /home/coq/work
+# 7. cargo-hax 설치
+RUN ulimit -s unlimited && cargo +nightly-2024-12-07 install cargo-hax
+
+# 8. 작업 디렉터리 설정
+WORKDIR /home/opam/workspaces/otpg
+RUN rustup override set nightly-2024-12-07
 
 # 컨테이너가 종료되지 않도록 유지
 CMD ["sleep", "infinity"]

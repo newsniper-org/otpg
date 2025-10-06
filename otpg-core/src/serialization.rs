@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::types::PrivateKeyBundle;
 
-#[cfg(any(hax, not(feature = "serde")))]
+#[cfg(hax)]
 use crate::keygen::generate_keys;
 
 // "바이트 슬라이스로부터 PrivateKeyBundle을 만들어내는" 역할을 정의합니다.
@@ -14,7 +14,7 @@ pub struct BincodeDeserializer;
 
 impl BundleDeserializer for BincodeDeserializer {
 
-    #[cfg(all(not(hax), feature = "serde"))]
+    #[cfg(not(hax))]
     fn deserialize(bytes: &[u8]) -> Result<PrivateKeyBundle> {
         let (bundle, _) = bincode::serde::decode_from_slice(
             bytes,
@@ -23,7 +23,7 @@ impl BundleDeserializer for BincodeDeserializer {
         Ok(bundle)
     }
 
-    #[cfg(any(hax, not(feature = "serde")))]
+    #[cfg(hax)]
     fn deserialize(_bytes: &[u8]) -> Result<PrivateKeyBundle> {
         Ok(todo!())
     }

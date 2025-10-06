@@ -38,12 +38,3 @@ pub fn encrypt<const NONCE_LEN: usize, C: AeadCipher<NONCE_LEN>, PQ: PostQuantum
         aead_ciphertext: [nonce.0.as_slice(), aead_ciphertext.as_slice()].concat(),
     })
 }
-
-#[cfg(hax)]
-pub fn encrypt_to_verify(
-    sender_keys: &PrivateKeyBundle,
-    recipient_bundle: &PublicKeyBundle,
-    plaintext: &[u8],
-) -> Result<CiphertextBundle> {
-    todo!()
-}

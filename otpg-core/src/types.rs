@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[cfg(all(not(hax), feature = "serde"))]
+#[cfg(not(hax))]
 use serde::{Deserialize, Serialize};
 
 use crate::{define_with_serde, optional_serde_derive};

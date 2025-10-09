@@ -22,7 +22,7 @@ elliptic-curve = { version = "0.13.8", features = ["digest", "ecdh"] }
 openssl = { version = "0.10.73", features = ["bindgen"] }
 totp-rs = { version = "5.7.0", features = ["zeroize", "rand", "gen_secret"] }
 chrono = "0.4.42"
-creusot-contracts = { version = "0.7.0-dev", features = ["creusot"]}
+creusot-contracts = { version = "0.7.0-dev"}
 chacha20 = { version = "0.10.0-rc.2", features = ["rand_core", "rng", "serde", "xchacha", "zeroize"] }
 
 [patch.crates-io]

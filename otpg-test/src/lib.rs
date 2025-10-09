@@ -10,6 +10,7 @@ mod tests {
     use otpg_core::keygen;
     use otpg_core::encrypt;
     use otpg_core::decrypt;
+    use rand::rngs::ThreadRng;
     use totp_rs::Rfc6238;
     use totp_rs::TOTP;
     use otpg_core::types::{LittleEndianIntermediateRepr, PrivateKeyBundle, PrivateKeyVault};
@@ -32,8 +33,8 @@ mod tests {
     fn test_happy_path_roundtrip() {
         let mut rng = rand::rng();
         // --- 1. 설정: 앨리스와 밥의 키 생성 ---
-        let (alice_pub, alice_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, 1568, 3168, 32, 1568, Kyber1024KEM, 56, 56, 224, X448KeyAgreement, 32, BLAKE3KDF, 57, 114, ED448Signer, _>(10, &mut rng).unwrap();
-        let (_bob_pub, bob_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, 1568, 3168, 32, 1568, Kyber1024KEM, 56, 56, 224, X448KeyAgreement, 32, BLAKE3KDF, 57, 114, ED448Signer, _>(10, &mut rng).unwrap();
+        let (alice_pub, alice_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, 1568, 3168, 32, 1568, Kyber1024KEM, 56, 56, 224, X448KeyAgreement, 32, BLAKE3KDF, 57, 114, ED448Signer, ThreadRng>(10, &mut rng).unwrap();
+        let (_bob_pub, bob_vault) = keygen::generate_keys::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, 1568, 3168, 32, 1568, Kyber1024KEM, 56, 56, 224, X448KeyAgreement, 32, BLAKE3KDF, 57, 114, ED448Signer, ThreadRng>(10, &mut rng).unwrap();
         
         // 1단계(인증)를 통과했다고 가정하고, 밥의 개인키를 미리 복호화/역직렬화.
         // 실제 앱에서는 이 부분이 OTP 인증 후에 발생. 테스트를 위해 수동으로 수행.

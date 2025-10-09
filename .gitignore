@@ -1,9 +1,4 @@
 /target
 
-otpg-core/proofs/fstar/extraction/*
-!otpg-core/proofs/fstar/extraction/Makefile
-!otpg-core/proofs/fstar/extraction/Correctness.fst
-.fstar-cache/
-.cache.boot/
-
-proof/.lake/
+rustc*.txt
+verif/

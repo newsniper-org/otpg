@@ -9,6 +9,7 @@ pub fn is_ok<T, E>(r: Result<T, E>) -> bool {
     }
 }
 
+#[logic]
 pub fn cmp_if_ok<T: PartialEq, E>(a: Result<T, E>, b: T) -> bool {
     match a {
         Ok(a_inner) => a_inner == b,
@@ -16,6 +17,7 @@ pub fn cmp_if_ok<T: PartialEq, E>(a: Result<T, E>, b: T) -> bool {
     }
 }
 
+#[trusted]
 pub fn concat_bytes(inputs: &[&[u8]]) -> Vec<u8> {
     inputs.concat()
 }

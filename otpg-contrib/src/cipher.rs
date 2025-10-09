@@ -1,13 +1,12 @@
-use std::error::Error;
-
 use chacha20::cipher::{Array, StreamCipher};
 use chacha20poly1305::consts::U24;
+use creusot_contracts::trusted;
 use ed448::Signature;
 use ed448_goldilocks::SigningKey;
 use openssl::derive::Deriver;
 use openssl::pkey::{Id, PKey};
 use otpg_core::cipher::{AeadCipher, KeyAgreement, KeyPairGen, OneTimePrekeysPairGen, PostQuantumKEM, Signer, KDF};
-use otpg_core::constants::{XCHACHA20_NONCE_LEN};
+use otpg_core::constants::{XCHACHA20_NONCE_LEN, XCHACHA20_KEY_LEN};
 use otpg_core::error::{OtpgError, Result};
 use otpg_core::types::{Bytes, GetContextStr, CiphertextBundle, PrivateKeyBundle, PublicKeyBundle};
 
@@ -26,7 +25,8 @@ use chacha20::{
 // `chacha20poly1305`를 사용한 실제 구현체를 만듭니다.
 pub struct XChaCha20Poly1305Cipher;
 
-impl AeadCipher<32, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cipher {
+#[trusted]
+impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cipher {
     fn encrypt_aead(key: &[u8; 32], plaintext: &[u8], associated_data: &[u8]) -> Result<(otpg_core::types::Bytes<XCHACHA20_NONCE_LEN>, Vec<u8>)> {
         let cipher = XChaCha20Poly1305::new(key.into());
         let mut nonce_bytes = [0u8; XCHACHA20_NONCE_LEN];

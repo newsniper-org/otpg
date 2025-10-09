@@ -107,7 +107,7 @@ pub const KYBER1024_CIPHERTEXT_LEN: usize = 1568;
 
 
 #[cfg_attr(not(creusot), derive(Serialize, Deserialize))]
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct LittleEndianIntermediateRepr(pub Vec<u8>);
 
 impl LittleEndianIntermediateRepr {

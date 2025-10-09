@@ -149,7 +149,7 @@ impl<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BY
         let signed_prekey = Bytes::copy_from(&value.0[SIGKEY_BYTES+KA_PRVKEY_BYTES+PQ_PRVKEY_BYTES..SIGKEY_BYTES+KA_PRVKEY_BYTES+PQ_PRVKEY_BYTES+KA_PRVKEY_BYTES]);
         
         let remaining_count = value.0[SIGKEY_BYTES+KA_PRVKEY_BYTES+PQ_PRVKEY_BYTES+KA_PRVKEY_BYTES..].len() / KA_PRVKEY_BYTES;
-        let one_time_prekeys = (0..remaining_count-1).map(|i| {
+        let one_time_prekeys = (0..remaining_count).map(|i| {
             let v0 = value.as_slice();
             Bytes::copy_from(&v0[(SIGKEY_BYTES+KA_PRVKEY_BYTES+PQ_PRVKEY_BYTES+KA_PRVKEY_BYTES + i*KA_PRVKEY_BYTES)..(SIGKEY_BYTES+KA_PRVKEY_BYTES+PQ_PRVKEY_BYTES+KA_PRVKEY_BYTES + (i+1)*KA_PRVKEY_BYTES)])
         }).collect();

@@ -118,8 +118,8 @@ impl KeyPairGen<1568, 3168> for Kyber1024KEM {
 
 pub struct X448KeyAgreement;
 
-impl KeyAgreement<56,56,56> for X448KeyAgreement {
-    fn derive_when_encrypt<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(sender_keys: &PrivateKeyBundle<56, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, recipient_bundle: &PublicKeyBundle<56,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<56>, Bytes<56>, Bytes<56>)> {
+impl KeyAgreement<56,56,224> for X448KeyAgreement {
+    fn derive_when_encrypt<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(sender_keys: &PrivateKeyBundle<56, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, recipient_bundle: &PublicKeyBundle<56,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<224>, Bytes<56>, Bytes<56>)> {
         // --- 1. 사용할 수신자의 일회성 사전 키(OPK) 랜덤 선택 ---
         let mut rng = rand::rng();
         let opks = recipient_bundle.one_time_prekeys.clone();

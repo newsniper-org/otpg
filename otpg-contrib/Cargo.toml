@@ -15,6 +15,11 @@ openssl.workspace = true
 blake3.workspace = true
 ed448-goldilocks.workspace = true
 ed448.workspace = true
+creusot-contracts = { workspace = true }
+chacha20 = { workspace = true, features = ["rand_core", "rng", "serde", "xchacha", "zeroize"] }
 
 [features]
 wasm-bindgen = ["getrandom/wasm_js", "blake3/wasm32_simd"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }

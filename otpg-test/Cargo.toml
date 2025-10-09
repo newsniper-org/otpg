@@ -12,3 +12,4 @@ chrono.workspace = true
 blake3.workspace = true
 bincode.workspace = true
 rand.workspace = true
+chacha20 = { workspace = true, features = ["rand_core", "rng", "serde", "xchacha", "zeroize"] }

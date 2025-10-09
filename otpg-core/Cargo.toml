@@ -19,11 +19,9 @@ bincode = { workspace = true, features = ["serde"] }
 elliptic-curve = { workspace = true, features = ["serde"] }
 openssl = { workspace = true }
 aead = { version = "0.5.2", features = ["getrandom", "heapless", "stream"] }
-
-
-[target."cfg(hax)".dependencies]
-hax-lib = { git = "https://github.com/hacspec/hax", version = "0.3.5" }
-
+creusot-contracts = { workspace = true }
+serde_arrays = "0.2.0"
+crypto-bigint = { version = "0.7.0-rc.8", features = ["extra-sizes", "rand_core", "serde", "zeroize"] }
 
 [features]
 wasm-bindgen = ["getrandom/wasm_js"]
@@ -33,4 +31,5 @@ default = ["simd"]
 vendored-openssl = ["openssl/vendored"]
 
 [lints.rust]
-unexpected_cfgs = {level = "warn", check-cfg = ['cfg(hax)']}
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }
+

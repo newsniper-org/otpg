@@ -4,7 +4,7 @@ members = ["otpg-core", "otpg-contrib", "otpg-test"]
 
 [workspace.dependencies]
 blake3 = { version = "1.8.2", features = ["digest", "pure", "zeroize"] }
-chacha20poly1305 = { version = "0.10.1", features = ["heapless", "stream"] }
+chacha20poly1305 = { version = "0.11.0-rc.1", features = ["heapless", "bytes", "zeroize"] }
 ed448 = "0.5.0-rc.1"
 getrandom = "0.3.3"
 zeroize = { version = "1.8.2", features = ["derive"] }
@@ -22,7 +22,9 @@ elliptic-curve = { version = "0.13.8", features = ["digest", "ecdh"] }
 openssl = { version = "0.10.73", features = ["bindgen"] }
 totp-rs = { version = "5.7.0", features = ["zeroize", "rand", "gen_secret"] }
 chrono = "0.4.42"
-
+creusot-contracts = { version = "0.7.0-dev", features = ["creusot"]}
+chacha20 = { version = "0.10.0-rc.2", features = ["rand_core", "rng", "serde", "xchacha", "zeroize"] }
 
 [patch.crates-io]
 signature = {git = "https://github.com/newsniper-org/rustcrypto-traits", branch = "hotfix/nightly-2024-12-07-compat"}
+creusot-contracts = { path = "/var/home/ybi/creusot/creusot-contracts" }

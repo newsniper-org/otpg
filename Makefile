@@ -7,16 +7,24 @@ build-wasmpack:
 clean-build:
 	cargo clean
 
-verify-%:
-	./verify.sh "$(patsubst verify-%,%,$@)"
+verify-fstar-%:
+	./verify-fstar.sh "$(patsubst verify-fstar-%,%,$@)"
 
-.PHONY: verify
-verify: verify-core
+.PHONY: verify-fstar
+verify-fstar: verify-fstar-core
+
+verify-coq-%:
+	./verify-coq.sh "$(patsubst verify-fstar-%,%,$@)"
+
+.PHONY: verify-coq
+verify-coq: verify-coq-core
+
 
 clean-%-proofs:
 	rm -f $(patsubst clean-%-proofs,otpg-%,$@)/proofs/fstar/extraction/$(patsubst clean-%-proofs,Otpg_%,$@).*.fst
 	rm -f $(patsubst clean-%-proofs,otpg-%,$@)/proofs/fstar/extraction/.depend
 	rm -f $(patsubst clean-%-proofs,otpg-%,$@)/proofs/fstar/extraction/hax.fst.config.json
+	rm -rfd $(patsubst clean-%-proofs,otpg-%,$@)/proofs/coq
 
 clean-proofs: clean-core-proofs
 	rm -rfd .fstar-cache

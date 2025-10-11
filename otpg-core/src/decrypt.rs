@@ -1,6 +1,5 @@
 // src/decrypt.rs
 
-use creusot_contracts::trusted;
 
 use crate::auth::{OtpVerifier};
 use crate::cipher::{AeadCipher, KeyAgreement, PostQuantumKEM, KDF};

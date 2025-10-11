@@ -1,6 +1,5 @@
 // src/keygen.rs
 
-use creusot_contracts::trusted;
 use rand::{CryptoRng};
 
 use crate::auth::OtpVerifier;

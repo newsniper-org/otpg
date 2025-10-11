@@ -2,8 +2,6 @@
 
 use thiserror::Error;
 
-use creusot_contracts::{trusted};
-
 
 #[derive(Error, Debug)]
 pub enum OtpgError {

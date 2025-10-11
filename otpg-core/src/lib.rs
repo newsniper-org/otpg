@@ -1,3 +1,5 @@
+#![feature(const_slice_make_iter)]
+
 pub mod types;
 pub mod error;
 pub mod keygen;

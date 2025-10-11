@@ -21,7 +21,7 @@ pub struct Bytes<const LEN: usize>(
 );
 
 impl<const LEN: usize> Bytes<LEN> {
-    
+    #[trusted]
     pub fn copy_from_inplace(&mut self, source: &[u8]) {
         self.0.iter_mut().zip(source.iter()).for_each(|(this, other)| {
             (*this) = *other;
@@ -111,14 +111,14 @@ pub const KYBER1024_CIPHERTEXT_LEN: usize = 1568;
 pub struct LittleEndianIntermediateRepr(pub Vec<u8>);
 
 impl LittleEndianIntermediateRepr {
-    
+    #[trusted]
     pub fn as_slice(&self) -> &[u8] {
         self.0.as_slice()
     }
 }
 
 impl<const KA_PUBKEY_BYTES: usize, const PQ_CT_BYTES: usize, const NONCE_BYTES: usize> From<LittleEndianIntermediateRepr> for CiphertextBundle<KA_PUBKEY_BYTES, PQ_CT_BYTES, NONCE_BYTES> {
-    
+    #[trusted]
     fn from(value: LittleEndianIntermediateRepr) -> Self {
         let sender_identity_key = Bytes::copy_from(&value.0[0..KA_PUBKEY_BYTES]);
         let sender_ephemeral_key = Bytes::copy_from(&value.0[KA_PUBKEY_BYTES..(KA_PUBKEY_BYTES+KA_PUBKEY_BYTES)]);
@@ -133,7 +133,7 @@ impl<const KA_PUBKEY_BYTES: usize, const PQ_CT_BYTES: usize, const NONCE_BYTES: 
 }
 
 impl<const KA_PUBKEY_BYTES: usize, const PQ_CT_BYTES: usize, const NONCE_BYTES: usize> Into<LittleEndianIntermediateRepr>  for CiphertextBundle<KA_PUBKEY_BYTES, PQ_CT_BYTES, NONCE_BYTES> {
-    
+    #[trusted]
     fn into(self) -> LittleEndianIntermediateRepr {
         let opk_id_le_bytes: [u8; 4] = self.opk_id.to_le_bytes();
         let slices = [self.sender_identity_key.0.as_slice(), &self.sender_ephemeral_key.0.as_slice(), opk_id_le_bytes.as_slice(), self.pq_ciphertext.0.as_slice(), self.aead_ciphertext.as_slice()];
@@ -162,7 +162,7 @@ impl<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BY
 }
 
 impl<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize> Into<LittleEndianIntermediateRepr> for PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES> {
-    
+    #[trusted]
     fn into(self) -> LittleEndianIntermediateRepr {
         let Self{
             identity_key_sig, identity_key_kx, identity_key_pq, signed_prekey, one_time_prekeys
@@ -176,14 +176,14 @@ impl<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BY
 
 
 impl Version {
-    
+    #[trusted]
     pub const fn to_le_bytes(self) -> [u8; 8] {
         let major_le: [u8; 4] = self.0.to_le_bytes();
         let minor_le: [u8; 4] = self.1.to_le_bytes();
         [major_le[0], major_le[1], major_le[2], major_le[3], minor_le[0], minor_le[1], minor_le[2], minor_le[3]]
     }
 
-    
+    #[trusted]
     pub const fn from_le_bytes(le_bytes: [u8; 8]) -> Self {
         let major = u32::from_le_bytes([le_bytes[0], le_bytes[1], le_bytes[2], le_bytes[3]]);
         let minor = u32::from_le_bytes([le_bytes[4], le_bytes[5], le_bytes[6], le_bytes[7]]);
@@ -191,7 +191,7 @@ impl Version {
     }
 }
 
-
+#[trusted]
 pub(crate) fn make_private_vault<const NONCE_BYTES: usize, V: OtpVerifier + GetContextStr, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES> + GetContextStr, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_BYTES> + GetContextStr>(major: u32, minor: u32, s_otp: [u8; 20], nonce: [u8; NONCE_BYTES], ciphertext:Vec<u8>) -> PrivateKeyVault<NONCE_BYTES> {
     PrivateKeyVault {
         version: Version(major, minor),

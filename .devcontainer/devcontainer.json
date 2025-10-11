@@ -22,5 +22,17 @@
     }
   },
 
-  "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"]
+  "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
+  "mounts": [
+    {
+      "type": "bind",
+      "source": "/var/home/ybi/.ssh/id_ed25519",
+      "target": "/home/opam/.ssh/id_ed25519"
+    },
+    {
+      "type": "bind",
+      "source": "/var/home/ybi/.ssh/id_ed25519.pub",
+      "target": "/home/opam/.ssh/id_ed25519.pub"
+    }
+  ]
 }

@@ -1,19 +1,19 @@
 build:
-	cargo build
+	cargo +nightly-2025-10-01 build
 
 build-wasmpack:
 	RUSTFLAGS='--cfg getrandom_backend="wasm_js"' wasm-pack build --features "wasm-bindgen"
 
 clean-build:
-	cargo clean
+	cargo +nightly-2025-10-01 clean
 
 verify:
-	cargo creusot
+	cargo +nightly-2025-10-01 creusot
 
 clean-proofs:
-	cargo creusot clean
+	rm -rfd verif
 
 clean: clean-build clean-proofs
 
 test:
-	cargo test
+	cargo +nightly-2025-10-01 test

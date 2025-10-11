@@ -25,8 +25,9 @@ use chacha20::{
 // `chacha20poly1305`를 사용한 실제 구현체를 만듭니다.
 pub struct XChaCha20Poly1305Cipher;
 
-#[trusted]
+
 impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cipher {
+    
     fn encrypt_aead(key: &[u8; 32], plaintext: &[u8], associated_data: &[u8]) -> Result<(otpg_core::types::Bytes<XCHACHA20_NONCE_LEN>, Vec<u8>)> {
         let cipher = XChaCha20Poly1305::new(key.into());
         let mut nonce_bytes = [0u8; XCHACHA20_NONCE_LEN];
@@ -40,8 +41,9 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
         Ok((nonce, ciphertext))
     }
 
+    
     fn decrypt(key: &[u8; 32], nonce: &[u8; XCHACHA20_NONCE_LEN], ciphertext: &[u8]) -> Vec<u8> {
-        let mut cipher = XChaCha20::new(&(*key).into(), &(*nonce).into());
+        let mut cipher = <XChaCha20 as KeyIvInit>::new(&(*key).into(), &(*nonce).into());
 
         let plaintext = {
             let mut result = ciphertext.to_vec();
@@ -52,6 +54,7 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
         plaintext
     }
 
+    
     fn decrypt_aead(key: &[u8; 32], nonce_and_ciphertext: &[u8], associated_data: &[u8]) -> Result<Vec<u8>> {
         let cipher = XChaCha20Poly1305::new(key.into());
         let (tmp_nonce, ciphertext) = nonce_and_ciphertext.split_at(XCHACHA20_NONCE_LEN);
@@ -69,8 +72,9 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
         input_size < XCHACHA20_NONCE_LEN
     }
     
+    
     fn encrypt(key: &[u8; 32], nonce: &[u8; XCHACHA20_NONCE_LEN], plaintext: &[u8]) -> Vec<u8> {
-        let mut cipher = XChaCha20::new(key.into(), nonce.into());
+        let mut cipher = <XChaCha20 as KeyIvInit>::new(key.into(), nonce.into());
 
         let ciphertext = {
             let mut result = plaintext.to_vec();
@@ -96,11 +100,13 @@ impl GetContextStr for XChaCha20Poly1305Cipher {
 pub struct Kyber1024KEM;
 
 impl PostQuantumKEM<1568,3168,32, 1568> for Kyber1024KEM {
+    
     fn encap(public_key: &[u8; 1568]) -> Result<(Bytes<32>, Bytes<1568>)> {
         let (sec, ct) = kyber::key_controler::KeyControKyber1024::encap(public_key).unwrap();
         Ok((Bytes::copy_from(&sec), Bytes::copy_from(&ct)))
     }
 
+    
     fn decap(secret_key: &[u8; 3168], ciphertext: &[u8]) -> Result<Vec<u8>> {
         let result = kyber::key_controler::KeyControKyber1024::decap(secret_key, ciphertext).unwrap();
         Ok(result)
@@ -108,6 +114,8 @@ impl PostQuantumKEM<1568,3168,32, 1568> for Kyber1024KEM {
 }
 
 impl KeyPairGen<1568, 3168> for Kyber1024KEM {
+
+    
     fn generate_keypair() -> (Bytes<1568>, Bytes<3168>) {
         let (pubkey, prvkey) = kyber::key_controler::KeyControKyber1024::keypair().unwrap();
         (Bytes::copy_from(&pubkey), Bytes::copy_from(&prvkey))
@@ -119,6 +127,7 @@ impl KeyPairGen<1568, 3168> for Kyber1024KEM {
 pub struct X448KeyAgreement;
 
 impl KeyAgreement<56,56,224> for X448KeyAgreement {
+    
     fn derive_when_encrypt<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(sender_keys: &PrivateKeyBundle<56, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, recipient_bundle: &PublicKeyBundle<56,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<224>, Bytes<56>, Bytes<56>)> {
         // --- 1. 사용할 수신자의 일회성 사전 키(OPK) 랜덤 선택 ---
         let mut rng = rand::rng();
@@ -163,6 +172,7 @@ impl KeyAgreement<56,56,224> for X448KeyAgreement {
         ))
     }
 
+    
     fn derive_when_decrypt<const PQ_PRVKEY_BYTES: usize, const PQ_CT_BYTES: usize, const SIGKEY_BYTES: usize, const NONCE_BYTES: usize>(recipient_keys: &PrivateKeyBundle<56, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, bundle: &CiphertextBundle<56, PQ_CT_BYTES, NONCE_BYTES>, shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<56>) {
         // 1. 필요한 모든 키들을 라이브러리 타입으로 변환
         // recipient_keys와 bundle에서 키 바이트들을 PKey 객체 등으로 변환합니다.
@@ -208,6 +218,7 @@ impl KeyAgreement<56,56,224> for X448KeyAgreement {
 }
 
 impl KeyPairGen<56, 56> for X448KeyAgreement {
+    
     fn generate_keypair() -> (Bytes<56>, Bytes<56>) {
         let kx = PKey::generate_x448().unwrap();
         let kx_pk_bytes = Bytes::copy_from(&kx.raw_public_key().unwrap());
@@ -224,6 +235,7 @@ impl OneTimePrekeysPairGen<56, 56> for X448KeyAgreement {
 pub struct BLAKE3KDF;
 
 impl KDF<32> for BLAKE3KDF {
+    
     fn derive_key(context: &str, key_material: &[u8]) -> [u8; 32] {
         blake3::derive_key(context, key_material)
     }
@@ -240,6 +252,7 @@ impl GetContextStr for BLAKE3KDF {
 pub struct ED448Signer;
 
 impl Signer<57,114> for ED448Signer {
+    
     fn sign<R: rand::CryptoRng + ?Sized>(msg: &[u8], rng: &mut R) -> (Bytes<57>, Bytes<114>) {
         let ik_sig = SigningKey::generate(rng);
 

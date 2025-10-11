@@ -13,7 +13,8 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     wget \
     build-essential \
     m4 \
-    unzip libssl-dev libclang-dev libgmp-dev pkg-config \
+    unzip libssl-dev libclang-dev libgmp-dev pkg-config autoconf \
+    zlib1g-dev libgtksourceview-3.0-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Typst 설치
@@ -26,22 +27,21 @@ RUN wget https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-u
 USER opam
 WORKDIR /home/opam
 
-# 5. Rust 및 Z3 설치
+# 5. Rust 설치
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-COPY get_fstar_z3.sh .
-RUN sudo chmod +x get_fstar_z3.sh
-RUN sudo ./get_fstar_z3.sh /usr/local/bin
 ENV PATH="/home/opam/.cargo/bin:${PATH}"
 
-# 6. fstar 설치
-RUN ulimit -s unlimited && eval $(opam env) && opam install fstar
+# 6. Creusot 설치
+RUN ulimit -s unlimited && git clone https://github.com/creusot-rs/creusot/ \
+    && cd creusot && ./INSTALL
 
-# 7. cargo-hax 설치
-RUN ulimit -s unlimited && cargo +nightly-2024-12-07 install cargo-hax
+WORKDIR /home/opam
+RUN ulimit -s unlimited && eval $(opam env) && git clone https://github.com/creusot-rs/creusot-ide \
+    && opam pin creusot-lsp creusot-ide/ -y
 
-# 8. 작업 디렉터리 설정
+# 7. 작업 디렉터리 설정
 WORKDIR /home/opam/workspaces/otpg
-RUN rustup override set nightly-2024-12-07
+RUN rustup override set nightly-2025-10-01
 
 # 컨테이너가 종료되지 않도록 유지
 CMD ["sleep", "infinity"]

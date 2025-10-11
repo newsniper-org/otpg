@@ -27,4 +27,4 @@ chacha20 = { version = "0.10.0-rc.2", features = ["rand_core", "rng", "serde", "
 
 [patch.crates-io]
 signature = {git = "https://github.com/newsniper-org/rustcrypto-traits", branch = "hotfix/nightly-2024-12-07-compat"}
-creusot-contracts = { path = "/var/home/ybi/creusot/creusot-contracts" }
+creusot-contracts = { path = "/home/opam/creusot/creusot-contracts" }

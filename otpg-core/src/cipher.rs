@@ -13,14 +13,14 @@ pub trait AeadCipher<const KEY_BYTES: usize, const NONCE_BYTES: usize> : GetCont
     fn too_short_for_nonce(input_size: usize) -> bool;
     fn gen_nonce<R: CryptoRng + ?Sized>(rng: &mut R) -> [u8; NONCE_BYTES];
 
-    #[trusted]
+    
     fn is_valid_cipher(key: &[u8; KEY_BYTES], nonce: &[u8; NONCE_BYTES], plaintext: &[u8]) -> bool {
         let ciphertext = Self::encrypt(key, nonce, plaintext);
         let decrypted = Self::decrypt(key, nonce, ciphertext.as_slice());
         decrypted == plaintext
     }
 
-    #[trusted]
+    
     fn is_valid_aead_cipher(key: &[u8; KEY_BYTES], plaintext: &[u8; NONCE_BYTES], associated_data: &[u8]) -> bool {
         let encrypted = Self::encrypt_aead(key, plaintext, associated_data);
         let decrypted = match encrypted {
@@ -53,7 +53,7 @@ pub trait KeyPairGen<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize> {
 }
 
 pub trait OneTimePrekeysPairGen<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize> : KeyPairGen<PUBKEY_BYTES, PRVKEY_BYTES> {
-    #[trusted]
+    
     fn gen_opkspair(num_opks: u32) -> (Vec<Bytes<PUBKEY_BYTES>>, Vec<Bytes<PRVKEY_BYTES>>) {
         let opks= (0..num_opks).map(|_| {
             Self::generate_keypair()

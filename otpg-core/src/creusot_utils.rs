@@ -17,7 +17,7 @@ pub fn cmp_if_ok<T: PartialEq, E>(a: Result<T, E>, b: T) -> bool {
     }
 }
 
-#[trusted]
+
 pub fn concat_bytes(inputs: &[&[u8]]) -> Vec<u8> {
     inputs.concat()
 }

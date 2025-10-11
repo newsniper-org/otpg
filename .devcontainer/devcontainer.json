@@ -1,5 +1,5 @@
 {
-  "name": "OTPG Formal Verification (hax+F*)",
+  "name": "OTPG Formal Verification (Creusot)",
 
   "build": {
     "dockerfile": "../Dockerfile",
@@ -15,7 +15,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "fstar-lang.fstar-vscode-assistant", // F* 지원 확장 프로그램
+        "creusot-rs.creusot-ide", // F* 지원 확장 프로그램
         "rust-lang.rust-analyzer",
         "tamasfe.even-better-toml"
       ]

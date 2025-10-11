@@ -7,7 +7,7 @@ use crate::types::{CiphertextBundle, PrivateKeyBundle, PublicKeyBundle};
 use crate::cipher::{AeadCipher, KeyAgreement, PostQuantumKEM, KDF};
 // ... 필요한 다른 use 구문들 ...
 
-#[trusted]
+
 /// 발신자의 개인키와 수신자의 공개키 묶음을 사용하여 메시지를 암호화합니다.
 pub fn encrypt<const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_BYTES>, const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_CT_BYTES: usize, KA: KeyAgreement<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_CT_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES>, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(
     sender_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,

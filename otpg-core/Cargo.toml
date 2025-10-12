@@ -33,3 +33,7 @@ vendored-openssl = ["openssl/vendored"]
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }
 
+[target.'cfg(creusot)'.dependencies]
+totp-rs = {workspace = true}
+chrono = {workspace = true}
+

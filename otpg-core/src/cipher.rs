@@ -1,4 +1,7 @@
-use creusot_contracts::{ensures, logic, requires, trusted, Seq};
+use creusot_contracts::{ensures, logic, requires, trusted};
+#[cfg(creusot)]
+use creusot_contracts:: Seq;
+
 use rand::CryptoRng;
 
 use crate::error::Result;

@@ -17,3 +17,6 @@ pub mod cipher;
 pub(crate) mod utils;
 
 pub mod creusot_utils;
+
+#[cfg(creusot)]
+pub mod proofs;

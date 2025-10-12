@@ -1,6 +1,10 @@
 use chacha20::cipher::{Array, StreamCipher};
 use chacha20poly1305::consts::U24;
-use creusot_contracts::{logic, pearlite, requires, trusted, Seq};
+use creusot_contracts::{logic, requires, trusted};
+
+#[cfg(creusot)]
+use creusot_contracts::{pearlite, Seq};
+
 use ed448::Signature;
 use ed448_goldilocks::SigningKey;
 use openssl::derive::Deriver;

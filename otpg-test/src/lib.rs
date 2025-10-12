@@ -1,19 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use chacha20::cipher::{InOut, StreamCipher};
-    use chacha20poly1305::aead::Aead;
-    use chacha20poly1305::KeyInit;
+    use chacha20::cipher::{StreamCipher};
     use otpg_contrib::cipher::{ED448Signer, Kyber1024KEM, X448KeyAgreement, BLAKE3KDF};
     use otpg_contrib::{auth::TotpRsVerifier, cipher::XChaCha20Poly1305Cipher};
     use otpg_core::constants::XCHACHA20_NONCE_LEN;
     use otpg_core::error::OtpgError;
     use otpg_core::keygen;
-    use otpg_core::encrypt;
-    use otpg_core::decrypt;
     use rand::rngs::ThreadRng;
     use totp_rs::Rfc6238;
     use totp_rs::TOTP;
-    use otpg_core::types::{LittleEndianIntermediateRepr, PrivateKeyBundle, PrivateKeyVault};
+    use otpg_core::types::{LittleEndianIntermediateRepr};
 
     use chacha20::{
         KeyIvInit, XChaCha20

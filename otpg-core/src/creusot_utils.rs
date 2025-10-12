@@ -1,4 +1,4 @@
-use creusot_contracts::{logic::Mapping, *};
+use creusot_contracts::*;
 
 
 #[logic]
@@ -18,7 +18,7 @@ pub fn eq_if_ok<T: PartialEq, E>(a: Result<T, E>, b: T) -> bool {
 }
 
 #[logic]
-pub fn select_left_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: Mapping<A, C>) -> Result<C, E> {
+pub fn select_left_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: logic::Mapping<A, C>) -> Result<C, E> {
     match r {
         Ok((a, _)) => Ok(f.get(a)),
         Err(e) => Err(e)
@@ -26,7 +26,7 @@ pub fn select_left_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: Mapping<A, C>) -> 
 }
 
 #[logic]
-pub fn select_right_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: Mapping<B, C>) -> Result<C, E> {
+pub fn select_right_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: logic::Mapping<B, C>) -> Result<C, E> {
     match r {
         Ok((_, b)) => Ok(f.get(b)),
         Err(e) => Err(e)
@@ -68,7 +68,7 @@ const fn greater_than_zero_length<T>(v: Seq<T>) -> bool {
 }
 
 #[logic]
-pub const fn fmap_result<A, B, E>(input: Result<A, E>, fmap: Mapping<A, B>) -> Result<B, E> {
+pub const fn fmap_result<A, B, E>(input: Result<A, E>, fmap: logic::Mapping<A, B>) -> Result<B, E> {
     match input {
         Ok(a) => Ok(fmap.get(a)),
         Err(e) => Err(e)
@@ -133,4 +133,31 @@ pub const fn get_size_of_mat<const N: usize>(inputs: Seq<[u8; N]>) -> Int {
 #[trusted]
 pub fn concat_mat<const N: usize>(inputs: &[[u8; N]]) -> Vec<u8> {
     inputs.concat()
+}
+
+
+#[logic]
+pub const fn get_sum_of_sizes(inputs: Seq<Seq<u8>>) -> Int {
+    let seq_of_len = inputs.map(|s: Seq<u8>| s.len() );
+    get_sum(seq_of_len)
+}
+
+
+#[logic]
+#[ensures(
+    result.len() == get_sum_of_sizes(inputs)
+)]
+pub fn concat_pearlite(inputs: Seq<Seq<u8>>) -> Seq<u8> {
+    concat_pearlite_recursive(inputs, 0)
+}
+
+#[logic]
+fn concat_pearlite_recursive(inputs: Seq<Seq<u8>>, head: Int) -> Seq<u8> {
+    if head < inputs.len() {
+        pearlite! {
+            inputs[head].concat(concat_pearlite_recursive(inputs, head+1))
+        }
+    } else {
+        seq![]
+    }
 }

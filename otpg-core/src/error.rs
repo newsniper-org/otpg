@@ -2,17 +2,28 @@
 
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum OtpgAEADError {
-    #[error("AEAD encryption failed")]
     EncrptionFailed,
-
-    #[error("AEAD decryption failed")]
     DecrptionFailed,
-
-    #[error("Too short for nonce")]
     TooShortForNonce
 }
+impl OtpgAEADError {
+    pub const fn to_str(self) -> &'static str {
+        match self {
+            Self::EncrptionFailed => "AEAD encryption failed",
+            Self::DecrptionFailed => "AEAD decryption failed",
+            Self::TooShortForNonce => "Too short for nonce"
+        }
+    }
+}
+
+impl std::fmt::Display for OtpgAEADError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_str())
+    }
+}
+
 
 #[derive(Error, Debug)]
 pub enum OtpgError {

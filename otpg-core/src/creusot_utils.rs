@@ -138,3 +138,10 @@ pub fn concat_mat<const N: usize>(inputs: Vec<[u8; N]>) -> Vec<u8> {
 }
 
 
+#[ensures(
+    ((a@.len() == b@.len()) && (forall<i: usize> i@ < a@.len() ==> a[i]@ == b[i]@)) == result
+)]
+#[trusted]
+pub fn eq_bytes(a: &[u8], b: &[u8]) -> bool {
+    a.iter().eq(b.iter())
+}

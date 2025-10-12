@@ -1,9 +1,10 @@
+#![feature(const_trait_impl)]
+
+use creusot_contracts::trusted;
 use rand::Fill;
 
 pub mod auth;
 pub mod cipher;
-
-use creusot_contracts::trusted;
 
 #[trusted]
 fn gen_bytearr<R : rand::CryptoRng + ?Sized, const LEN: usize>(rng: &mut R) -> [u8; LEN] {

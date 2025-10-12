@@ -2,9 +2,12 @@
 
 use creusot_contracts::*;
 
+use crate::bytes_concat;
 use crate::error::{Result};
 use crate::types::{CiphertextBundle, PrivateKeyBundle, PublicKeyBundle};
 use crate::cipher::{AeadCipher, KeyAgreement, PostQuantumKEM, KDF};
+
+#[cfg(creusot)]
 use crate::creusot_utils::{concat, is_ok};
 // ... 필요한 다른 use 구문들 ...
 
@@ -27,10 +30,10 @@ pub fn encrypt<const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_
     let session_key = KD::derive_key("otpg-encryption-v1", &master_secret);
 
     // 부가 인증 데이터(AD): 발신자와 수신자의 장기 공개키를 묶어, 이 암호문이 누구와 누구 사이의 대화인지 증명
-    let associated_data = concat([
-        &sender_identity_key.0,
-        &recipient_bundle.identity_key.0
-    ]);
+    let associated_data = bytes_concat![
+        sender_identity_key.0,
+        recipient_bundle.identity_key.0
+    ];
     
 
     // --- 6. AEAD 대칭키 암호화 ---
@@ -42,6 +45,6 @@ pub fn encrypt<const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_
         sender_ephemeral_key,
         opk_id: opk_id,
         pq_ciphertext,
-        aead_ciphertext: concat([&nonce.0, &aead_ciphertext]),
+        aead_ciphertext: bytes_concat![nonce.0, aead_ciphertext]
     })
 }

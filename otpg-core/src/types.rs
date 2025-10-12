@@ -13,7 +13,7 @@ use crate::cipher::{AeadCipher, KDF};
 use crate::creusot_utils::{concat, concat_mat};
 
 
-pub trait GetContextStr {
+pub const trait GetContextStr {
     fn get_context_str() -> &'static str;
 }
 

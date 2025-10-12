@@ -7,7 +7,7 @@ edition = "2024"
 getrandom = { workspace = true }
 zeroize = { workspace = true, features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
-hmac = { workspace = true }
+hmac.workspace = true
 sha1-checked = { workspace = true }
 base32 = { workspace = true }
 prost = { version = "0.14.1", features = ["no-recursion-limit"], optional = true }

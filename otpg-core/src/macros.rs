@@ -21,3 +21,24 @@ macro_rules! cfg_match {
         )*
     };
 }
+
+
+#[cfg(not(creusot))]
+#[macro_export]
+macro_rules! bytes_concat {
+    ( $( $expr:expr ),+ ) => [
+        [$(
+            $expr.as_slice()
+        ),+].concat()
+    ];
+}
+
+#[cfg(creusot)]
+#[macro_export]
+macro_rules! bytes_concat {
+    ( $( $expr:expr ),+ ) => [
+        crate::creusot_utils::concat([$(
+            &$expr
+        ),+])
+    ];
+}

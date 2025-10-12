@@ -1,12 +1,23 @@
-use creusot_contracts::{trusted, requires, ensures};
+use creusot_contracts::{ensures, logic, requires, trusted, Seq};
 use rand::CryptoRng;
 
 use crate::error::Result;
 use crate::types::{Bytes, CiphertextBundle, GetContextStr, PrivateKeyBundle, PublicKeyBundle};
-use crate::creusot_utils::{is_ok, cmp_if_ok, has_any_item, OptionalOrdering, select_left_if_ok, select_right_if_ok, fmap_result};
 
+#[cfg(creusot)]
+use crate::creusot_utils::{cmp_if_ok, eq_bytes, fmap_result, has_any_item, is_ok, select_left_if_ok, select_right_if_ok, OptionalOrdering};
+
+
+pub const trait HasNonceLength<const NONCE_BYTES: usize> {
+    #[ensures(input@.len() <= NONCE_BYTES@ ==> result)]
+    fn too_short_for_nonce(input: &[u8]) -> bool;
+
+    #[logic]
+    #[ensures(input.len() <= NONCE_BYTES@ ==> result)]
+    fn too_short_for_nonce_creusot(input: Seq<u8>) -> bool;
+}
 // "대칭키 암호화/복호화"라는 역할을 정의합니다.
-pub trait AeadCipher<const KEY_BYTES: usize, const NONCE_BYTES: usize> : GetContextStr {
+pub trait AeadCipher<const KEY_BYTES: usize, const NONCE_BYTES: usize> : const GetContextStr + const HasNonceLength<NONCE_BYTES> {
 
     
     #[requires(plaintext@.len() > 0)]
@@ -25,18 +36,12 @@ pub trait AeadCipher<const KEY_BYTES: usize, const NONCE_BYTES: usize> : GetCont
     #[ensures(has_any_item(result))]
     fn decrypt_aead(key: &[u8; KEY_BYTES], nonce_and_ciphertext: &[u8], associated_data: &[u8]) -> Result<Vec<u8>>;
 
-    #[ensures(result ==> input_size@ <= NONCE_BYTES@)]
-    fn too_short_for_nonce(input_size: usize) -> bool;
-    
-    #[ensures(result@.len() == NONCE_BYTES@)]
-    fn gen_nonce<R: CryptoRng + ?Sized>(rng: &mut R) -> [u8; NONCE_BYTES];
-
     #[ensures(plaintext@.len() > 0 ==> result == true)]
     #[trusted]
     fn is_valid_cipher(key: &[u8; KEY_BYTES], nonce: &[u8; NONCE_BYTES], plaintext: &[u8]) -> bool {
         let ciphertext = Self::encrypt(key, nonce, plaintext);
         let decrypted = Self::decrypt(key, nonce, ciphertext.as_slice());
-        decrypted == plaintext
+        eq_bytes(plaintext, decrypted.as_slice())
     }
 
     #[ensures(plaintext@.len() > 0 ==> result == true)]
@@ -55,6 +60,9 @@ pub trait AeadCipher<const KEY_BYTES: usize, const NONCE_BYTES: usize> : GetCont
             Err(_) => false
         }
     }
+
+    #[ensures(result@.len() == NONCE_BYTES@)]
+    fn gen_nonce<R: CryptoRng + ?Sized>(rng: &mut R) -> [u8; NONCE_BYTES];
 
 }
 
@@ -113,7 +121,7 @@ pub trait OneTimePrekeysPairGen<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: u
 }
 
 
-pub trait KDF<const DERIVED_KEY_BYTES: usize> : GetContextStr {
+pub trait KDF<const DERIVED_KEY_BYTES: usize> : const GetContextStr {
     #[requires(key_material@.len() > 0)] // 전제 조건: 키 재료는 비어있으면 안 된다.
     #[ensures(result@.len() == DERIVED_KEY_BYTES@)] // 결과 보장: 결과 키의 길이는 항상 DERIVED_KEY_BYTES와 같다.
     fn derive_key(context: &str, key_material: &[u8]) -> [u8; DERIVED_KEY_BYTES];

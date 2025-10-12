@@ -1,4 +1,5 @@
 #![feature(const_slice_make_iter)]
+#![feature(const_trait_impl)]
 
 pub mod types;
 pub mod error;

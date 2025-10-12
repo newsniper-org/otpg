@@ -1,11 +1,11 @@
 use chacha20::cipher::{Array, StreamCipher};
 use chacha20poly1305::consts::U24;
-use creusot_contracts::{trusted, requires};
+use creusot_contracts::{logic, pearlite, requires, trusted, Seq};
 use ed448::Signature;
 use ed448_goldilocks::SigningKey;
 use openssl::derive::Deriver;
 use openssl::pkey::{Id, PKey};
-use otpg_core::cipher::{AeadCipher, KeyAgreement, KeyPairGen, OneTimePrekeysPairGen, PostQuantumKEM, Signer, KDF};
+use otpg_core::cipher::{AeadCipher, HasNonceLength, KeyAgreement, KeyPairGen, OneTimePrekeysPairGen, PostQuantumKEM, Signer, KDF};
 use otpg_core::constants::{XCHACHA20_NONCE_LEN, XCHACHA20_KEY_LEN};
 use otpg_core::error::{OtpgError, Result};
 use otpg_core::types::{Bytes, GetContextStr, CiphertextBundle, PrivateKeyBundle, PublicKeyBundle};
@@ -69,9 +69,7 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
         Ok(plaintext)
     }
     
-    fn too_short_for_nonce(input_size: usize) -> bool {
-        input_size <= XCHACHA20_NONCE_LEN
-    }
+    
     
     #[trusted]
     fn encrypt(key: &[u8; 32], nonce: &[u8; XCHACHA20_NONCE_LEN], plaintext: &[u8]) -> Vec<u8> {
@@ -86,12 +84,30 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
         ciphertext
     }
     
+
+    #[trusted]
     fn gen_nonce<R: rand::CryptoRng + ?Sized>(rng: &mut R) -> [u8; XCHACHA20_NONCE_LEN] {
         crate::gen_bytearr(rng)
     }
+    
 }
 
-impl GetContextStr for XChaCha20Poly1305Cipher {
+impl const HasNonceLength<XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cipher {
+    #[trusted]
+    fn too_short_for_nonce(input: &[u8]) -> bool {
+        input.len() <= XCHACHA20_NONCE_LEN
+    }
+
+    #[logic]
+    #[trusted]
+    fn too_short_for_nonce_creusot(input: Seq<u8>) -> bool {
+        pearlite! {
+            input.len() <= XCHACHA20_NONCE_LEN@
+        }
+    }
+}
+
+impl const GetContextStr for XChaCha20Poly1305Cipher {
     fn get_context_str() -> &'static str {
         "XCHACHA20POLY1305"
     }
@@ -245,7 +261,7 @@ impl KDF<32> for BLAKE3KDF {
     }
 }
 
-impl GetContextStr for BLAKE3KDF {
+impl const GetContextStr for BLAKE3KDF {
     fn get_context_str() -> &'static str {
         "BLAKE3"
     }

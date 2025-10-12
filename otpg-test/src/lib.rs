@@ -54,7 +54,7 @@ mod tests {
         let current_timestamp = chrono::Utc::now().timestamp() as u64;
         let valid_otp = generate_valid_otp(alice_vault.authentication.s_otp.0.as_slice());
         let decryption_result = otpg_core::decrypt::decrypt::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, 1568, 3168, 32, 1568, Kyber1024KEM, 56, 56, 224, X448KeyAgreement, 32, BLAKE3KDF, 57, 114>(
-            &TotpRsVerifier,
+            
             &alice_vault,
             &valid_otp,
             &ciphertext_bundle,
@@ -80,7 +80,7 @@ mod tests {
         // 현재 Unix 타임스탬프를 가져옵니다.
         let current_timestamp = chrono::Utc::now().timestamp() as u64;
         let decryption_result = otpg_core::decrypt::decrypt::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, 1568, 3168, 32, 1568, Kyber1024KEM, 56, 56, 224, X448KeyAgreement, 32, BLAKE3KDF, 57, 114>(
-            &TotpRsVerifier,
+            
             &alice_vault,
             wrong_otp,
             &ciphertext_bundle,
@@ -109,7 +109,7 @@ mod tests {
         // 현재 Unix 타임스탬프를 가져옵니다.
         let current_timestamp = chrono::Utc::now().timestamp() as u64;
         let decryption_result = otpg_core::decrypt::decrypt::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, 1568, 3168, 32, 1568, Kyber1024KEM, 56, 56, 224, X448KeyAgreement, 32, BLAKE3KDF, 57, 114>(
-            &TotpRsVerifier,
+            
             &charlie_vault,
             &valid_otp_charlie,
             &bundle_for_alice,
@@ -139,7 +139,6 @@ mod tests {
         // 현재 Unix 타임스탬프를 가져옵니다.
         let current_timestamp = chrono::Utc::now().timestamp() as u64;
         let decryption_result = otpg_core::decrypt::decrypt::<TotpRsVerifier, XCHACHA20_NONCE_LEN, XChaCha20Poly1305Cipher, 1568, 3168, 32, 1568, Kyber1024KEM, 56, 56, 224, X448KeyAgreement, 32, BLAKE3KDF, 57, 114>(
-            &TotpRsVerifier,
             &alice_vault,
             &valid_otp,
             &bundle,

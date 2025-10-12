@@ -161,3 +161,14 @@ fn concat_pearlite_recursive(inputs: Seq<Seq<u8>>, head: Int) -> Seq<u8> {
         seq![]
     }
 }
+
+#[logic]
+pub fn is_prefix_of(a: Seq<u8>, b: Seq<u8>) -> bool {
+    if a.len() > b.len() {
+        false
+    } else {
+        pearlite! {
+            forall<i: Int> i >= 0 && i < a.len() ==> a[i] == b[i]
+        }
+    }
+}

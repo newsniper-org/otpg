@@ -1,4 +1,4 @@
-use creusot_contracts::{ensures, logic, requires, trusted};
+use creusot_contracts::{ensures, logic, pearlite, requires, trusted};
 #[cfg(creusot)]
 use creusot_contracts:: Seq;
 
@@ -8,7 +8,7 @@ use crate::error::Result;
 use crate::types::{Bytes, CiphertextBundle, GetContextStr, PrivateKeyBundle, PublicKeyBundle};
 
 #[cfg(creusot)]
-use crate::creusot_utils::{cmp_if_ok, fmap_result, has_any_item, is_ok, select_left_if_ok, select_right_if_ok, OptionalOrdering};
+use crate::creusot_utils::{cmp_if_ok, has_any_item, is_ok, select_left_if_ok, select_right_if_ok, OptionalOrdering, is_prefix_of};
 
 use crate::utils::eq_bytes;
 
@@ -83,20 +83,60 @@ pub trait PostQuantumKEM<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize, c
     fn decap(secret_key: &[u8; PRVKEY_BYTES], ciphertext: &[u8]) -> Result<Vec<u8>>;
 }
 
-pub trait KeyAgreement<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize, const SEC_BYTES: usize> : KeyPairGen<PUBKEY_BYTES, PRVKEY_BYTES> {
+pub trait KeyAgreement<const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_SEC_BYTES: usize> : KeyPairGen<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES> {
+    #[ensures(is_ok(result))]
     #[ensures(
-        is_ok(result) &&
-        cmp_if_ok(fmap_result(result, |(_,b, _, _): (u32, Bytes<SEC_BYTES>, Bytes<PUBKEY_BYTES>, Bytes<PUBKEY_BYTES>)| b.0@.len()), SEC_BYTES@) == OptionalOrdering::Equal &&
-        cmp_if_ok(fmap_result(result, |(_,_, c, _): (u32, Bytes<SEC_BYTES>, Bytes<PUBKEY_BYTES>, Bytes<PUBKEY_BYTES>)| c.0@.len()), PUBKEY_BYTES@) == OptionalOrdering::Equal &&
-        cmp_if_ok(fmap_result(result, |(_,_, _, d): (u32, Bytes<SEC_BYTES>, Bytes<PUBKEY_BYTES>, Bytes<PUBKEY_BYTES>)| d.0@.len()), PUBKEY_BYTES@) == OptionalOrdering::Equal
+        {
+            result == Self::derive_when_encrypt_spec::<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES, SIGN_BYTES>(sender_keys, recipient_bundle)
+        }
     )]
-    fn derive_when_encrypt<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(sender_keys: &PrivateKeyBundle<PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, recipient_bundle: &PublicKeyBundle<PUBKEY_BYTES,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<SEC_BYTES>, Bytes<PUBKEY_BYTES>, Bytes<PUBKEY_BYTES>)>; // (opk_id, classic_dh_secrets, sender_identity_key, sender_ephemeral_key)
+    fn derive_when_encrypt<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(sender_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, recipient_bundle: &PublicKeyBundle<KA_PUBKEY_BYTES,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<KA_SEC_BYTES>, Bytes<KA_PUBKEY_BYTES>, Bytes<KA_PUBKEY_BYTES>)>; // (opk_id, classic_dh_secrets, sender_identity_key, sender_ephemeral_key)
 
     #[ensures(
         result.0@.len() > 0 &&
-        result.1.0@.len() == PUBKEY_BYTES@
+        result.1.0@.len() == KA_PUBKEY_BYTES@
     )]
-    fn derive_when_decrypt<const PQ_PRVKEY_BYTES: usize, const PQ_CT_BYTES: usize, const SIGKEY_BYTES: usize, const NONCE_BYTES: usize>(recipient_keys: &PrivateKeyBundle<PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, bundle: &CiphertextBundle<PUBKEY_BYTES,PQ_CT_BYTES, NONCE_BYTES>, shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<PUBKEY_BYTES>); // (master_secret, recipient_ik_pub_bytes)
+    fn derive_when_decrypt<const PQ_PRVKEY_BYTES: usize, const PQ_CT_BYTES: usize, const SIGKEY_BYTES: usize, const NONCE_BYTES: usize>(recipient_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, bundle: &CiphertextBundle<KA_PUBKEY_BYTES,PQ_CT_BYTES, NONCE_BYTES>, shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<KA_PUBKEY_BYTES>) { // (master_secret, recipient_ik_pub_bytes)
+        Self::derive_when_decrypt_inner(recipient_keys, &bundle.sender_identity_key, &bundle.sender_ephemeral_key, bundle.opk_id, shared_secret_pq)
+    }
+
+    fn derive_when_decrypt_inner<const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize>(recipient_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, sender_identity_key: &Bytes<KA_PUBKEY_BYTES>, sender_ephemeral_key: &Bytes<KA_PUBKEY_BYTES>, opk_id: u32, shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<KA_PUBKEY_BYTES>);
+
+    // derive_when_encrypt의 논리적 모델
+    #[logic(opaque)]
+    fn derive_when_encrypt_spec<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(_sender_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, _recipient_bundle: &PublicKeyBundle<KA_PUBKEY_BYTES,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<KA_SEC_BYTES>, Bytes<KA_PUBKEY_BYTES>, Bytes<KA_PUBKEY_BYTES>)> {
+        dead
+    }
+
+    // derive_when_decrypt의 논리적 모델
+    #[logic(opaque)]
+    fn derive_when_decrypt_inner_spec<const PQ_PRVKEY_BYTES: usize, const PQ_CT_BYTES: usize, const SIGKEY_BYTES: usize, const NONCE_BYTES: usize>(_recipient_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, _sender_identity_key: &Bytes<KA_PUBKEY_BYTES>, _sender_ephemeral_key: &Bytes<KA_PUBKEY_BYTES>, _opk_id: u32, _shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<KA_PUBKEY_BYTES>) {
+        dead
+    }
+
+    // ⭐ 핵심: Key Agreement의 정확성 공리
+    // 암호화 시 생성된 정보(CiphertextBundle)를 이용해 복호화하면,
+    // 암호화 시 유도된 classic_dh_secrets와 복호화 시 master_secret의 첫 부분이 일치함을 보장.
+    #[logic]
+    #[ensures(result)]
+    fn key_agreement_law<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES>, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(
+        sender_keys: PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,
+        recipient_keys: PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,
+        recipient_bundle: PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>,
+        shared_secret_pq: &[u8]
+    ) -> bool {
+        
+        match Self::derive_when_encrypt_spec::<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES, SIGN_BYTES>(&sender_keys, &recipient_bundle) {
+            Ok((opk_id, classic_dh, sender_ik, sender_ek)) => {
+                let (master_secret, _) = Self::derive_when_decrypt_inner_spec::<PQ_PRVKEY_BYTES, PQ_CT_BYTES, SIGKEY_BYTES, SIGN_BYTES>(&recipient_keys, &sender_ik, &sender_ek, opk_id, shared_secret_pq);
+                pearlite! {
+                    is_prefix_of(classic_dh.0@, master_secret@)
+                }
+            },
+            Err(_) => false
+        }
+        
+    }
 }
 
 pub trait KeyPairGen<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize> {

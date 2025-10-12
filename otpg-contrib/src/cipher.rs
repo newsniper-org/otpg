@@ -12,7 +12,7 @@ use openssl::pkey::{Id, PKey};
 use otpg_core::cipher::{AeadCipher, HasNonceLength, KeyAgreement, KeyPairGen, OneTimePrekeysPairGen, PostQuantumKEM, Signer, KDF};
 use otpg_core::constants::{XCHACHA20_NONCE_LEN, XCHACHA20_KEY_LEN};
 use otpg_core::error::{OtpgError, Result};
-use otpg_core::types::{Bytes, GetContextStr, CiphertextBundle, PrivateKeyBundle, PublicKeyBundle};
+use otpg_core::types::{Bytes, GetContextStr, PrivateKeyBundle, PublicKeyBundle};
 
 use chacha20poly1305::{
     aead::{Aead, KeyInit, Payload},
@@ -197,17 +197,17 @@ impl KeyAgreement<56,56,224> for X448KeyAgreement {
     }
 
     #[trusted]
-    fn derive_when_decrypt<const PQ_PRVKEY_BYTES: usize, const PQ_CT_BYTES: usize, const SIGKEY_BYTES: usize, const NONCE_BYTES: usize>(recipient_keys: &PrivateKeyBundle<56, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, bundle: &CiphertextBundle<56, PQ_CT_BYTES, NONCE_BYTES>, shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<56>) {
+    fn derive_when_decrypt_inner<const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize>(recipient_keys: &PrivateKeyBundle<56, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, sender_identity_key: &Bytes<56>, sender_ephemeral_key: &Bytes<56>, opk_id: u32, shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<56>) {
         // 1. 필요한 모든 키들을 라이브러리 타입으로 변환
         // recipient_keys와 bundle에서 키 바이트들을 PKey 객체 등으로 변환합니다.
-        let sender_ik_pkey = PKey::public_key_from_raw_bytes(bundle.sender_identity_key.0.as_slice(), Id::X448).unwrap();
-        let sender_ek_pkey = PKey::public_key_from_raw_bytes(bundle.sender_ephemeral_key.0.as_slice(), Id::X448).unwrap();
+        let sender_ik_pkey = PKey::public_key_from_raw_bytes(sender_identity_key.0.as_slice(), Id::X448).unwrap();
+        let sender_ek_pkey = PKey::public_key_from_raw_bytes(sender_ephemeral_key.0.as_slice(), Id::X448).unwrap();
         
         let recipient_ik_pkey = PKey::private_key_from_raw_bytes(recipient_keys.identity_key_kx.0.as_slice(), Id::X448).unwrap();
         let recipient_spk_pkey = PKey::private_key_from_raw_bytes(recipient_keys.signed_prekey.0.as_slice(), Id::X448).unwrap();
         
         // opk_id를 사용하여 정확한 일회성 사전 개인키를 찾음
-        let recipient_opk_bytes = recipient_keys.one_time_prekeys[bundle.opk_id as usize];
+        let recipient_opk_bytes = recipient_keys.one_time_prekeys[opk_id as usize];
         let recipient_opk_pkey = PKey::private_key_from_raw_bytes(recipient_opk_bytes.0.as_slice(), Id::X448).unwrap();
 
 

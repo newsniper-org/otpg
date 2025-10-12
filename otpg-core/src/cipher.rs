@@ -1,4 +1,4 @@
-use creusot_contracts::{ensures, logic, pearlite, requires, trusted};
+use creusot_contracts::{ensures, logic, proof_assert, requires, trusted, seq};
 #[cfg(creusot)]
 use creusot_contracts:: Seq;
 
@@ -8,10 +8,7 @@ use crate::error::Result;
 use crate::types::{Bytes, CiphertextBundle, GetContextStr, PrivateKeyBundle, PublicKeyBundle};
 
 #[cfg(creusot)]
-use crate::creusot_utils::{cmp_if_ok, has_any_item, is_ok, select_left_if_ok, select_right_if_ok, OptionalOrdering, is_prefix_of};
-
-use crate::utils::eq_bytes;
-
+use crate::creusot_utils::{cmp_if_ok, has_any_item, is_ok, select_right_if_ok, OptionalOrdering, is_prefix_of, concat_pearlite};
 pub const trait HasNonceLength<const NONCE_BYTES: usize> {
     #[ensures(input@.len() <= NONCE_BYTES@ ==> result)]
     fn too_short_for_nonce(input: &[u8]) -> bool;
@@ -26,43 +23,67 @@ pub trait AeadCipher<const KEY_BYTES: usize, const NONCE_BYTES: usize> : const G
     
     #[requires(plaintext@.len() > 0)]
     #[ensures(result@.len() >= plaintext@.len())]
+    #[ensures(result@ == Self::encrypt_spec(key@, nonce@, plaintext@))]
     fn encrypt(key: &[u8; KEY_BYTES], nonce: &[u8; NONCE_BYTES], plaintext: &[u8]) -> Vec<u8>;
 
     #[requires(plaintext@.len() > 0 && associated_data@.len() > 0)]
     #[ensures(is_ok(result) ==> cmp_if_ok(select_right_if_ok(result, |v: Vec<u8>| v@.len()), 0) == OptionalOrdering::Greater)]
+    #[ensures(result == Ok(Self::encrypt_aead_spec(key@, plaintext@, associated_data@)))]
     fn encrypt_aead(key: &[u8; KEY_BYTES], plaintext: &[u8], associated_data: &[u8]) -> Result<(Bytes<NONCE_BYTES>, Vec<u8>)>;
 
     #[requires(ciphertext@.len() > 0)]
     #[ensures(result@.len() > 0 && result@.len() <= ciphertext@.len())]
+    #[ensures(result@ == Self::decrypt_spec(key@, nonce@, ciphertext@))]
     fn decrypt(key: &[u8; KEY_BYTES], nonce: &[u8; NONCE_BYTES], ciphertext: &[u8]) -> Vec<u8>;
 
     #[requires(nonce_and_ciphertext@.len() > NONCE_BYTES@ && associated_data@.len() > 0)]
     #[ensures(has_any_item(result))]
+    #[ensures(result == Ok(Self::decrypt_aead_spec(key@, nonce_and_ciphertext@, associated_data@)))]
     fn decrypt_aead(key: &[u8; KEY_BYTES], nonce_and_ciphertext: &[u8], associated_data: &[u8]) -> Result<Vec<u8>>;
 
-    #[ensures(plaintext@.len() > 0 ==> result == true)]
-    #[trusted]
-    fn is_valid_cipher(key: &[u8; KEY_BYTES], nonce: &[u8; NONCE_BYTES], plaintext: &[u8]) -> bool {
-        let ciphertext = Self::encrypt(key, nonce, plaintext);
-        let decrypted = Self::decrypt(key, nonce, ciphertext.as_slice());
-        eq_bytes(plaintext, decrypted.as_slice())
+    #[logic(opaque)]
+    fn encrypt_spec(_key: Seq<u8>, _nonce: Seq<u8>, _plaintext: Seq<u8>) -> Seq<u8> {
+        dead
     }
 
-    #[ensures(plaintext@.len() > 0 ==> result == true)]
-    #[trusted]
-    fn is_valid_aead_cipher(key: &[u8; KEY_BYTES], plaintext: &[u8; NONCE_BYTES], associated_data: &[u8]) -> bool {
-        let encrypted = Self::encrypt_aead(key, plaintext, associated_data);
-        let decrypted = match encrypted {
-            Ok((nonce, ciphertext)) => {
-                let concated = [nonce.0.as_slice(), &ciphertext].concat();
-                Self::decrypt_aead(key, &concated, associated_data)
-            },
-            Err(e) => Err(e)
-        };
-        match decrypted {
-            Ok(succ_dec) => succ_dec == plaintext,
-            Err(_) => false
-        }
+    #[logic(opaque)]
+    fn decrypt_spec(_key: Seq<u8>, _nonce: Seq<u8>, _ciphertext: Seq<u8>) -> Seq<u8> {
+        dead
+    }
+
+    #[logic(law)]
+    fn symmetric_key_cipher_law() {
+        proof_assert!(
+            forall<key: Seq<u8>> forall<nonce: Seq<u8>> forall<plaintext: Seq<u8>>
+            key.len() == KEY_BYTES@ && nonce.len() == NONCE_BYTES@ && plaintext.len() > 0 ==> {
+                let ciphertext = Self::encrypt_spec(key, nonce, plaintext);
+                plaintext == Self::decrypt_spec(key, nonce, ciphertext)
+            }
+        )
+    }
+
+    #[logic(opaque)]
+    fn encrypt_aead_spec(_key: Seq<u8>, _plaintext: Seq<u8>, _associated_data: Seq<u8>) -> (Bytes<NONCE_BYTES>, Vec<u8>) {
+        dead
+    }
+
+    #[logic(opaque)]
+    fn decrypt_aead_spec(_key: Seq<u8>, _nonce_and_ciphertext: Seq<u8>, _associated_data: Seq<u8>) -> Vec<u8> {
+        dead
+    }
+
+    #[logic(law)]
+    fn symmetric_key_aead_cipher_law() {
+        proof_assert!(
+            forall<key: Seq<u8>> forall<associated_data: Seq<u8>> forall<plaintext: Seq<u8>>
+            key.len() == KEY_BYTES@ && associated_data.len() > 0 && plaintext.len() > 0 ==> {
+                let (nonce, ciphertext) = Self::encrypt_aead_spec(key, plaintext, associated_data);
+                let n = nonce.0@;
+                let c = ciphertext@;
+                let nonce_and_ciphertext = concat_pearlite(seq![n, c]);
+                plaintext == Self::decrypt_aead_spec(key, nonce_and_ciphertext, associated_data)@
+            }
+        )
     }
 
     #[ensures(result@.len() == NONCE_BYTES@)]
@@ -71,23 +92,50 @@ pub trait AeadCipher<const KEY_BYTES: usize, const NONCE_BYTES: usize> : const G
 }
 
 pub trait PostQuantumKEM<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize, const SEC_BYTES: usize, const CT_BYTES: usize> : KeyPairGen<PUBKEY_BYTES, PRVKEY_BYTES> {
+    #[ensures(is_ok(result))]
     #[ensures(
-        is_ok(result) &&
-        cmp_if_ok(select_left_if_ok(result, |v: Bytes<SEC_BYTES>| v.0@.len()), SEC_BYTES@) == OptionalOrdering::Equal &&
-        cmp_if_ok(select_right_if_ok(result, |v: Bytes<CT_BYTES>| v.0@.len()), CT_BYTES@) == OptionalOrdering::Equal
+        result == Ok(Self::encap_spec((*public_key)@))
     )]
     fn encap(public_key: &[u8; PUBKEY_BYTES]) -> Result<(Bytes<SEC_BYTES>, Bytes<CT_BYTES>)>;
 
     #[requires(ciphertext@.len() > 0)]
     #[ensures(has_any_item(result))]
+    #[ensures(
+        result == Ok(Self::decap_spec((*secret_key)@, ciphertext@))
+    )]
     fn decap(secret_key: &[u8; PRVKEY_BYTES], ciphertext: &[u8]) -> Result<Vec<u8>>;
+
+    #[logic(opaque)]
+    fn encap_spec(_public_key: Seq<u8>) -> (Bytes<SEC_BYTES>, Bytes<CT_BYTES>) {
+        dead
+    }
+
+    #[logic(opaque)]
+    fn decap_spec(_secret_key: Seq<u8>, _ciphertext: Seq<u8>) -> Vec<u8> {
+        dead
+    }
+
+    #[logic(opaque)]
+    fn logic_pk_from_sk(_sk: Seq<u8>) -> Seq<u8> {
+        dead
+    }
+
+    #[logic(law)]
+    fn encap_decap_law() {
+        proof_assert!(
+            forall<pk: Seq<u8>> forall<sk: Seq<u8>> Self::logic_pk_from_sk(sk) == pk ==> {
+                let (shs, ct) = Self::encap_spec(pk);
+                Self::decap_spec(sk, ct.0@)@ == shs.0@
+            }
+        )
+    }
 }
 
 pub trait KeyAgreement<const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_SEC_BYTES: usize> : KeyPairGen<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES> {
     #[ensures(is_ok(result))]
     #[ensures(
         {
-            result == Self::derive_when_encrypt_spec::<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES, SIGN_BYTES>(sender_keys, recipient_bundle)
+            result == Ok(Self::derive_when_encrypt_spec(sender_keys.identity_key_kx, recipient_bundle.identity_key, recipient_bundle.signed_prekey.0, recipient_bundle.one_time_prekeys@))
         }
     )]
     fn derive_when_encrypt<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(sender_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, recipient_bundle: &PublicKeyBundle<KA_PUBKEY_BYTES,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<KA_SEC_BYTES>, Bytes<KA_PUBKEY_BYTES>, Bytes<KA_PUBKEY_BYTES>)>; // (opk_id, classic_dh_secrets, sender_identity_key, sender_ephemeral_key)
@@ -100,42 +148,33 @@ pub trait KeyAgreement<const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usiz
         Self::derive_when_decrypt_inner(recipient_keys, &bundle.sender_identity_key, &bundle.sender_ephemeral_key, bundle.opk_id, shared_secret_pq)
     }
 
+    #[ensures(
+        result == Self::derive_when_decrypt_inner_spec(recipient_keys.identity_key_kx, recipient_keys.signed_prekey, recipient_keys.one_time_prekeys[opk_id as usize], sender_identity_key, sender_ephemeral_key, shared_secret_pq@)
+    )]
     fn derive_when_decrypt_inner<const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize>(recipient_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, sender_identity_key: &Bytes<KA_PUBKEY_BYTES>, sender_ephemeral_key: &Bytes<KA_PUBKEY_BYTES>, opk_id: u32, shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<KA_PUBKEY_BYTES>);
 
     // derive_when_encrypt의 논리적 모델
     #[logic(opaque)]
-    fn derive_when_encrypt_spec<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(_sender_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, _recipient_bundle: &PublicKeyBundle<KA_PUBKEY_BYTES,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<KA_SEC_BYTES>, Bytes<KA_PUBKEY_BYTES>, Bytes<KA_PUBKEY_BYTES>)> {
+    fn derive_when_encrypt_spec(_sender_prvkey: Bytes<KA_PRVKEY_BYTES>, _ik: Bytes<KA_PUBKEY_BYTES>, _spk: Bytes<KA_PUBKEY_BYTES>, _opks: Seq<Bytes<KA_PUBKEY_BYTES>>) -> (u32, Bytes<KA_SEC_BYTES>, Bytes<KA_PUBKEY_BYTES>, Bytes<KA_PUBKEY_BYTES>) {
         dead
     }
 
     // derive_when_decrypt의 논리적 모델
     #[logic(opaque)]
-    fn derive_when_decrypt_inner_spec<const PQ_PRVKEY_BYTES: usize, const PQ_CT_BYTES: usize, const SIGKEY_BYTES: usize, const NONCE_BYTES: usize>(_recipient_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, _sender_identity_key: &Bytes<KA_PUBKEY_BYTES>, _sender_ephemeral_key: &Bytes<KA_PUBKEY_BYTES>, _opk_id: u32, _shared_secret_pq: &[u8]) -> (Vec<u8>, Bytes<KA_PUBKEY_BYTES>) {
+    fn derive_when_decrypt_inner_spec(_ik_kx: Bytes<KA_PRVKEY_BYTES>, _spk: Bytes<KA_PRVKEY_BYTES>, _opk: Bytes<KA_PRVKEY_BYTES>, _sender_identity_key: &Bytes<KA_PUBKEY_BYTES>, _sender_ephemeral_key: &Bytes<KA_PUBKEY_BYTES>, _shared_secret_pq: Seq<u8>) -> (Vec<u8>, Bytes<KA_PUBKEY_BYTES>) {
         dead
     }
 
     // ⭐ 핵심: Key Agreement의 정확성 공리
     // 암호화 시 생성된 정보(CiphertextBundle)를 이용해 복호화하면,
     // 암호화 시 유도된 classic_dh_secrets와 복호화 시 master_secret의 첫 부분이 일치함을 보장.
-    #[logic]
-    #[ensures(result)]
-    fn key_agreement_law<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES>, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(
-        sender_keys: PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,
-        recipient_keys: PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,
-        recipient_bundle: PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>,
-        shared_secret_pq: &[u8]
-    ) -> bool {
-        
-        match Self::derive_when_encrypt_spec::<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES, SIGN_BYTES>(&sender_keys, &recipient_bundle) {
-            Ok((opk_id, classic_dh, sender_ik, sender_ek)) => {
-                let (master_secret, _) = Self::derive_when_decrypt_inner_spec::<PQ_PRVKEY_BYTES, PQ_CT_BYTES, SIGKEY_BYTES, SIGN_BYTES>(&recipient_keys, &sender_ik, &sender_ek, opk_id, shared_secret_pq);
-                pearlite! {
-                    is_prefix_of(classic_dh.0@, master_secret@)
-                }
-            },
-            Err(_) => false
-        }
-        
+    #[logic(law)]
+    fn key_agreement_law() {
+        proof_assert!(forall<s_ik_kx: Bytes<KA_PRVKEY_BYTES>> forall<r_ik: Bytes<KA_PUBKEY_BYTES>> forall<r_spk: Bytes<KA_PUBKEY_BYTES>> forall<r_opks: Seq<Bytes<KA_PUBKEY_BYTES>>> forall<rs_ik_kx: Bytes<KA_PRVKEY_BYTES>> forall<rs_spk: Bytes<KA_PRVKEY_BYTES>> forall<rs_opks: Seq<Bytes<KA_PRVKEY_BYTES>>>  forall<shared_secret_pq: Seq<u8>> {
+            let (opk_id, classic_dh, sender_ik, sender_ek) = Self::derive_when_encrypt_spec(s_ik_kx, r_ik, r_spk, r_opks);
+            let (master_secret, _) = Self::derive_when_decrypt_inner_spec(rs_ik_kx, rs_spk, rs_opks[opk_id@], &sender_ik, &sender_ek, shared_secret_pq);
+            is_prefix_of(classic_dh.0@, master_secret@)
+        })
     }
 }
 

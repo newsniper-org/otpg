@@ -26,12 +26,12 @@
   "mounts": [
     {
       "type": "bind",
-      "source": "/var/home/ybi/.ssh/id_ed25519",
+      "source": "/var/home/ybi/.ssh/id_ed25519", // 예시
       "target": "/home/opam/.ssh/id_ed25519"
     },
     {
       "type": "bind",
-      "source": "/var/home/ybi/.ssh/id_ed25519.pub",
+      "source": "/var/home/ybi/.ssh/id_ed25519.pub", // 예시
       "target": "/home/opam/.ssh/id_ed25519.pub"
     }
   ]

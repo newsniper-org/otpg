@@ -1,7 +1,8 @@
 
 
+use creusot_contracts::requires;
 #[allow(unused_imports)]
-use creusot_contracts::{prelude::DeepModel, Seq, prelude::logic, prelude::trusted};
+use creusot_contracts::{prelude::DeepModel, Seq, prelude::logic, prelude::trusted, prelude::ensures};
 
 
 #[cfg(not(creusot))]
@@ -9,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::auth::OtpVerifier;
 use crate::cipher::{AeadCipher, KDF};
+use crate::creusot_utils::{concat, concat_mat};
 
 
 pub trait GetContextStr {
@@ -142,6 +144,19 @@ impl<const KA_PUBKEY_BYTES: usize, const PQ_CT_BYTES: usize, const NONCE_BYTES: 
 }
 
 impl<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize> From<LittleEndianIntermediateRepr> for PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES> {
+
+    #[requires(
+        value.0@.len() > (SIGKEY_BYTES@ + KA_PRVKEY_BYTES@ + PQ_PRVKEY_BYTES@ + KA_PRVKEY_BYTES@)
+        && (value.0@.len() - (SIGKEY_BYTES@ + KA_PRVKEY_BYTES@ + PQ_PRVKEY_BYTES@ + KA_PRVKEY_BYTES@)) % KA_PRVKEY_BYTES@ == 0
+    )]
+    #[ensures(
+        result.identity_key_sig.0@.len() == SIGKEY_BYTES@ &&
+        result.identity_key_kx.0@.len() == KA_PRVKEY_BYTES@ &&
+        result.identity_key_pq.0@.len() == PQ_PRVKEY_BYTES@ &&
+        result.signed_prekey.0@.len() == KA_PRVKEY_BYTES@ &&
+        result.one_time_prekeys@.len() == ((value.0@.len() - (SIGKEY_BYTES@ + KA_PRVKEY_BYTES@ + PQ_PRVKEY_BYTES@ + KA_PRVKEY_BYTES@)) / KA_PRVKEY_BYTES@) &&
+        (forall<i: usize> i@ < result.one_time_prekeys@.len() ==> result.one_time_prekeys[i].0@.len() == KA_PRVKEY_BYTES@)
+    )]
     fn from(value: LittleEndianIntermediateRepr) -> Self {
         let identity_key_sig = Bytes::copy_from(&value.0[0..SIGKEY_BYTES]);
         let identity_key_kx = Bytes::copy_from(&value.0[SIGKEY_BYTES..SIGKEY_BYTES+KA_PRVKEY_BYTES]);
@@ -162,13 +177,15 @@ impl<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BY
 }
 
 impl<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize> Into<LittleEndianIntermediateRepr> for PrivateKeyBundle<KA_PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES> {
-    #[trusted]
+    #[ensures(
+        result.0@.len() == (SIGKEY_BYTES@ + KA_PRVKEY_BYTES@ + PQ_PRVKEY_BYTES@ + KA_PRVKEY_BYTES@) + (KA_PRVKEY_BYTES@ * self.one_time_prekeys@.len())
+    )]
     fn into(self) -> LittleEndianIntermediateRepr {
         let Self{
             identity_key_sig, identity_key_kx, identity_key_pq, signed_prekey, one_time_prekeys
         } = self;
-        let chained1 = one_time_prekeys.iter().map(|b| b.0.as_slice()).collect::<Vec<&[u8]>>().concat();
-        let chained0 = [identity_key_sig.0.as_slice(), identity_key_kx.0.as_slice(), identity_key_pq.0.as_slice(), signed_prekey.0.as_slice(), chained1.as_slice()].concat();
+        let chained1 = concat_mat(one_time_prekeys.iter().map(|b| b.0).collect::<Vec<[u8; KA_PRVKEY_BYTES]>>());
+        let chained0 = concat([&identity_key_sig.0, &identity_key_kx.0, &identity_key_pq.0, &signed_prekey.0, &chained1]);
         
         LittleEndianIntermediateRepr(chained0)
     }

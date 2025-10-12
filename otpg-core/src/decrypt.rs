@@ -1,11 +1,16 @@
 // src/decrypt.rs
 
 
+use creusot_contracts::requires;
+
 use crate::auth::{OtpVerifier};
 use crate::cipher::{AeadCipher, KeyAgreement, PostQuantumKEM, KDF};
+use crate::creusot_utils::concat;
 use crate::error::{OtpgError, Result};
 use crate::types::{CiphertextBundle, LittleEndianIntermediateRepr, PrivateKeyBundle, PrivateKeyVault};
 // ... 필요한 다른 use 구문들 ...
+
+
 
 
 /// 수신자의 개인키 저장소와 OTP 코드, 그리고 암호화된 메시지 묶음을 사용하여 원본 메시지를 복호화합니다.
@@ -21,21 +26,21 @@ pub fn decrypt<V: OtpVerifier, const NONCE_BYTES: usize, C: AeadCipher<DERIVED_K
 
 
     // 1.1. OTP 코드 검증
-    if !verifier.verify(otp_code, recipient_vault.authentication.s_otp.0.as_slice(), current_timestamp) {
+    if !verifier.verify(otp_code, &recipient_vault.authentication.s_otp.0, current_timestamp) {
         // 사용자가 입력한 코드가 유효하지 않으면, 즉시 에러를 반환하고 종료.
         return Err(OtpgError::AuthenticationError); // 에러 타입 추가 필요
     }
 
     // 1.2. KEK(키 암호화 키) 재유도
     let kek = KD::derive_key(&recipient_vault.authentication.kdf_context,
-        recipient_vault.authentication.s_otp.0.as_slice());
+        &recipient_vault.authentication.s_otp.0);
     
     // 1.3. 개인키 데이터 복호화 (AEAD)
     let plaintext_bytes = C::decrypt(&kek, &recipient_vault.encrypted_data.nonce.0,
-        recipient_vault.encrypted_data.ciphertext.as_slice());
+        &recipient_vault.encrypted_data.ciphertext);
 
     // 1.4. 개인키 묶음 역직렬화
-    let recipient_keys: PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES, SIGKEY_BYTES> = LittleEndianIntermediateRepr(plaintext_bytes).into();
+    let recipient_keys: PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES, SIGKEY_BYTES> = PrivateKeyBundle::from(LittleEndianIntermediateRepr(plaintext_bytes));
 
     // --- 2단계: PQXDH 세션 키 재계산 ---
     
@@ -53,15 +58,13 @@ pub fn decrypt<V: OtpVerifier, const NONCE_BYTES: usize, C: AeadCipher<DERIVED_K
 
     // 4.1. Nonce와 암호문 분리
     if C::too_short_for_nonce(bundle.aead_ciphertext.len()) {
-        return Err(OtpgError::AeadError("Too short for nonce!".to_string())); // 암호문이 너무 짧으면 에러
+        return Err(OtpgError::AeadError(crate::error::OtpgAEADError::TooShortForNonce)); // 암호문이 너무 짧으면 에러
     }
 
     // 4.2. 부가 인증 데이터(AD) 재구성 (Encrypt 함수와 *정확히* 같게!)
     // 수신자의 장기 공개키는 개인키로부터 유도해야 함
-    let associated_data = [
-        bundle.sender_identity_key.0.as_slice(),
-        recipient_ik_pub_bytes.0.as_slice(),
-    ].concat();
+    let associated_data = concat([&bundle.sender_identity_key.0,
+        &recipient_ik_pub_bytes.0]);
     let plaintext = C::decrypt_aead(&session_key, &bundle.aead_ciphertext, &associated_data)?;
 
     // --- 5단계: 평문(Plaintext) 반환 ---

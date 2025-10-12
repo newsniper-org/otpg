@@ -117,7 +117,23 @@ pub const fn get_sum_of_len(inputs: Seq<&[u8]>) -> Int {
     result@.len() == get_sum_of_len(inputs@)
 )]
 #[trusted]
+#[inline(always)]
 pub fn concat<const N: usize>(inputs: [&[u8]; N]) -> Vec<u8> {
+    inputs.concat()
+}
+
+#[logic]
+pub const fn get_size_of_mat<const N: usize>(inputs: Seq<[u8; N]>) -> Int {
+    let seq_of_len = inputs.map(|s: [u8; N]| pearlite! { s@.len() } );
+    get_sum(seq_of_len)  
+}
+
+#[ensures(
+    result@.len() == get_size_of_mat(inputs@)
+)]
+#[trusted]
+#[inline(always)]
+pub fn concat_mat<const N: usize>(inputs: Vec<[u8; N]>) -> Vec<u8> {
     inputs.concat()
 }
 

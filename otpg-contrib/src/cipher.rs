@@ -36,7 +36,7 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
 
         let payload = Payload { msg: plaintext, aad: associated_data };
         let ciphertext = cipher.encrypt(&nonce_bytes.into(), payload)
-            .map_err(|_| OtpgError::AeadError("AEAD Encryption failed!".to_string()))?;
+            .map_err(|_| OtpgError::AeadError(otpg_core::error::OtpgAEADError::EncrptionFailed))?;
         
         let nonce = otpg_core::types::Bytes(nonce_bytes);
         Ok((nonce, ciphertext))
@@ -64,7 +64,7 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
 
         let payload = Payload { msg: ciphertext, aad: associated_data };
         let plaintext = cipher.decrypt(&nonce, payload)
-            .map_err(|err| OtpgError::AeadError(format!("AEAD Decryption failed: {0}", err)))?;
+            .map_err(|_| OtpgError::AeadError(otpg_core::error::OtpgAEADError::DecrptionFailed))?;
 
         Ok(plaintext)
     }

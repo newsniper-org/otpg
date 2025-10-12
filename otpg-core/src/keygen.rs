@@ -23,7 +23,7 @@ pub fn generate_keys<V: OtpVerifier + GetContextStr, const NONCE_BYTES: usize, C
     let (opks_pub, opks_prv) = KA::gen_opkspair(num_opks);
 
     // --- 2. 사전 키 서명 ---
-    let (ik_sig, signature) = S::sign(spk_pk_bytes.0.as_slice(), rng);
+    let (ik_sig, signature) = S::sign(&spk_pk_bytes.0, rng);
 
     // --- 3. PublicKeyBundle 조립 ---
     let public_bundle = PublicKeyBundle {
@@ -55,7 +55,7 @@ pub fn generate_keys<V: OtpVerifier + GetContextStr, const NONCE_BYTES: usize, C
     let ciphertext = C::encrypt(
         &kek,
         &nonce,
-        serialized_private_keys.as_slice()
+        &serialized_private_keys
     );
 
     // --- 5. PrivateKeyVault 조립 ---

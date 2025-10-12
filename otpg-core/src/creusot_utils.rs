@@ -41,7 +41,7 @@ pub enum OptionalOrdering {
 }
 
 #[logic]
-pub fn cmp_if_ok<T: OrdLogic, E>(a: Result<T, E>, b: T) -> OptionalOrdering {
+pub const fn cmp_if_ok<T: OrdLogic, E>(a: Result<T, E>, b: T) -> OptionalOrdering {
     match a {
         Ok(a_inner) => if a_inner > b {
             OptionalOrdering::Greater
@@ -55,7 +55,7 @@ pub fn cmp_if_ok<T: OrdLogic, E>(a: Result<T, E>, b: T) -> OptionalOrdering {
 }
 
 #[logic]
-pub fn has_any_item<T, E>(r: Result<Vec<T>, E>) -> bool {
+pub const fn has_any_item<T, E>(r: Result<Vec<T>, E>) -> bool {
     match r {
         Ok(v) => greater_than_zero_length(pearlite! { v@ }),
         Err(_) => false
@@ -63,19 +63,19 @@ pub fn has_any_item<T, E>(r: Result<Vec<T>, E>) -> bool {
 }
 
 #[logic]
-fn greater_than_zero_length<T>(v: Seq<T>) -> bool {
+const fn greater_than_zero_length<T>(v: Seq<T>) -> bool {
     v.len() > 0
 }
 
 #[logic]
-pub fn fmap_result<A, B, E>(input: Result<A, E>, fmap: Mapping<A, B>) -> Result<B, E> {
+pub const fn fmap_result<A, B, E>(input: Result<A, E>, fmap: Mapping<A, B>) -> Result<B, E> {
     match input {
         Ok(a) => Ok(fmap.get(a)),
         Err(e) => Err(e)
     }
 }
 
-#[derive(::std::clone::Clone)]
+#[derive(::std::clone::Clone, ::std::marker::Copy)]
 pub struct IntSumWrapper(pub Int);
 
 impl IntSumWrapper {
@@ -102,7 +102,7 @@ impl IntSumWrapper {
 }
 
 #[logic]
-pub fn get_sum(inputs: Seq<Int>) -> Int {
+pub const fn get_sum(inputs: Seq<Int>) -> Int {
     IntSumWrapper::sum(inputs)
 }
 
@@ -117,7 +117,6 @@ pub const fn get_sum_of_len(inputs: Seq<&[u8]>) -> Int {
     result@.len() == get_sum_of_len(inputs@)
 )]
 #[trusted]
-#[inline(always)]
 pub fn concat<const N: usize>(inputs: [&[u8]; N]) -> Vec<u8> {
     inputs.concat()
 }
@@ -132,16 +131,6 @@ pub const fn get_size_of_mat<const N: usize>(inputs: Seq<[u8; N]>) -> Int {
     result@.len() == get_size_of_mat(inputs@)
 )]
 #[trusted]
-#[inline(always)]
-pub fn concat_mat<const N: usize>(inputs: Vec<[u8; N]>) -> Vec<u8> {
+pub fn concat_mat<const N: usize>(inputs: &[[u8; N]]) -> Vec<u8> {
     inputs.concat()
-}
-
-
-#[ensures(
-    ((a@.len() == b@.len()) && (forall<i: usize> i@ < a@.len() ==> a[i]@ == b[i]@)) == result
-)]
-#[trusted]
-pub fn eq_bytes(a: &[u8], b: &[u8]) -> bool {
-    a.iter().eq(b.iter())
 }

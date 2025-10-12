@@ -10,10 +10,6 @@ pub trait OtpVerifier : const GetContextStr {
     #[requires(s_otp@.len() == 20)]
     fn verify(code: &str, s_otp: &[u8], timestamp: u64) -> bool;
 
-    #[logic]
-    #[requires(s_otp@.len() == 20)]
-    fn verify_creusot(code: &str, s_otp: [u8; 20], timestamp: u64) -> bool;
-
     #[ensures(result@.len() == 20)]
     fn gen_s_otp<R : rand::CryptoRng + ?Sized>(rng: &mut R) -> [u8; 20];
 }

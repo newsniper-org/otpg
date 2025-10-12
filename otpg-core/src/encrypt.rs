@@ -8,7 +8,7 @@ use crate::types::{CiphertextBundle, PrivateKeyBundle, PublicKeyBundle};
 use crate::cipher::{AeadCipher, KeyAgreement, PostQuantumKEM, KDF};
 
 #[cfg(creusot)]
-use crate::creusot_utils::{concat, is_ok};
+use crate::creusot_utils::{is_ok};
 // ... 필요한 다른 use 구문들 ...
 
 
@@ -22,10 +22,10 @@ pub fn encrypt<const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_
     plaintext: &[u8],
 ) -> Result<CiphertextBundle<KA_PUBKEY_BYTES,PQ_CT_BYTES,NONCE_BYTES>> {
     let (opk_id, classic_dh_secrets, sender_identity_key, sender_ephemeral_key) = 
-        KA::derive_when_encrypt(sender_keys, recipient_bundle).unwrap();
+        KA::derive_when_encrypt(sender_keys, recipient_bundle)?;
     let (shared_secret_pq, pq_ciphertext) = PQ::encap(&recipient_bundle.identity_key_pq.0)?;
 
-    let master_secret = concat([&classic_dh_secrets.0, &shared_secret_pq.0]);
+    let master_secret = bytes_concat![classic_dh_secrets.0, shared_secret_pq.0];
 
     let session_key = KD::derive_key("otpg-encryption-v1", &master_secret);
 

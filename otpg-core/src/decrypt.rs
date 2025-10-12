@@ -3,10 +3,11 @@
 use creusot_contracts::*;
 
 use crate::auth::{OtpVerifier};
+use crate::bytes_concat;
 use crate::cipher::{AeadCipher, HasNonceLength, KeyAgreement, PostQuantumKEM, KDF};
 
 #[cfg(creusot)]
-use crate::creusot_utils::{concat, is_ok};
+use crate::creusot_utils::{is_ok};
 
 use crate::error::{OtpgError, Result};
 use crate::types::{CiphertextBundle, LittleEndianIntermediateRepr, PrivateKeyBundle, PrivateKeyVault};
@@ -16,16 +17,12 @@ use crate::types::{CiphertextBundle, LittleEndianIntermediateRepr, PrivateKeyBun
 #[logic]
 #[trusted]
 pub const fn able_to_try_decrypt<const KEY_BYTES: usize, const NONCE_BYTES: usize, V: OtpVerifier, C: AeadCipher<KEY_BYTES,NONCE_BYTES> + const HasNonceLength<NONCE_BYTES>, const PQ_CT_BYTES: usize, const KA_PUBKEY_BYTES: usize>(
-    recipient_vault: &PrivateKeyVault<NONCE_BYTES>,
-    otp_code: &str,
-    bundle: &CiphertextBundle<KA_PUBKEY_BYTES, PQ_CT_BYTES, NONCE_BYTES>,
-    current_timestamp: u64) -> bool {
-    let verified = V::verify_creusot(otp_code, recipient_vault.authentication.s_otp.0, current_timestamp);
+    bundle: &CiphertextBundle<KA_PUBKEY_BYTES, PQ_CT_BYTES, NONCE_BYTES>,) -> bool {
     let enough = !C::too_short_for_nonce_creusot(pearlite! { bundle.aead_ciphertext@ });
-    verified && enough
+    enough
 }
 
-#[requires(able_to_try_decrypt::<DERIVED_KEY_BYTES, NONCE_BYTES, V, C, PQ_CT_BYTES, KA_PUBKEY_BYTES>(recipient_vault, otp_code, bundle, current_timestamp))] // 전제 조건 1: OTP 코드가 유효해야 한다, 전제 조건 2: 암호문 길이가 Nonce 길이보다 길어야 한다.
+#[requires(able_to_try_decrypt::<DERIVED_KEY_BYTES, NONCE_BYTES, V, C, PQ_CT_BYTES, KA_PUBKEY_BYTES>(bundle))] // 전제 조건 1: OTP 코드가 유효해야 한다, 전제 조건 2: 암호문 길이가 Nonce 길이보다 길어야 한다.
 #[ensures(is_ok(result))] // 결과 보장: 복호화는 성공적으로 완료된다.
 /// 수신자의 개인키 저장소와 OTP 코드, 그리고 암호화된 메시지 묶음을 사용하여 원본 메시지를 복호화합니다.
 pub fn decrypt<V: OtpVerifier, const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_BYTES> + const HasNonceLength<NONCE_BYTES>, const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_CT_BYTES: usize, KA: KeyAgreement<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_CT_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES>, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(
@@ -76,8 +73,8 @@ pub fn decrypt<V: OtpVerifier, const NONCE_BYTES: usize, C: AeadCipher<DERIVED_K
 
     // 4.2. 부가 인증 데이터(AD) 재구성 (Encrypt 함수와 *정확히* 같게!)
     // 수신자의 장기 공개키는 개인키로부터 유도해야 함
-    let associated_data = concat([&bundle.sender_identity_key.0,
-        &recipient_ik_pub_bytes.0]);
+    let associated_data = bytes_concat![bundle.sender_identity_key.0,
+        recipient_ik_pub_bytes.0];
     let plaintext = C::decrypt_aead(&session_key, &bundle.aead_ciphertext, &associated_data)?;
 
     // --- 5단계: 평문(Plaintext) 반환 ---

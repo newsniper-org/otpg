@@ -184,7 +184,8 @@ impl<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BY
         let Self{
             identity_key_sig, identity_key_kx, identity_key_pq, signed_prekey, one_time_prekeys
         } = self;
-        let chained1 = concat_mat(one_time_prekeys.iter().map(|b| b.0).collect::<Vec<[u8; KA_PRVKEY_BYTES]>>());
+        let v = one_time_prekeys.iter().map(|b| b.0).collect::<Vec<[u8; KA_PRVKEY_BYTES]>>();
+        let chained1 = concat_mat(&v);
         let chained0 = concat([&identity_key_sig.0, &identity_key_kx.0, &identity_key_pq.0, &signed_prekey.0, &chained1]);
         
         LittleEndianIntermediateRepr(chained0)

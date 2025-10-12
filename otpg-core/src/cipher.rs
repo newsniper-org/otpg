@@ -5,8 +5,9 @@ use crate::error::Result;
 use crate::types::{Bytes, CiphertextBundle, GetContextStr, PrivateKeyBundle, PublicKeyBundle};
 
 #[cfg(creusot)]
-use crate::creusot_utils::{cmp_if_ok, eq_bytes, fmap_result, has_any_item, is_ok, select_left_if_ok, select_right_if_ok, OptionalOrdering};
+use crate::creusot_utils::{cmp_if_ok, fmap_result, has_any_item, is_ok, select_left_if_ok, select_right_if_ok, OptionalOrdering};
 
+use crate::utils::eq_bytes;
 
 pub const trait HasNonceLength<const NONCE_BYTES: usize> {
     #[ensures(input@.len() <= NONCE_BYTES@ ==> result)]
@@ -82,9 +83,9 @@ pub trait PostQuantumKEM<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize, c
 pub trait KeyAgreement<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize, const SEC_BYTES: usize> : KeyPairGen<PUBKEY_BYTES, PRVKEY_BYTES> {
     #[ensures(
         is_ok(result) &&
-        cmp_if_ok(fmap_result(result, |(_,b, _, _): (_, Bytes<SEC_BYTES>, _, _)| b.0@.len()), SEC_BYTES@) == OptionalOrdering::Equal &&
-        cmp_if_ok(fmap_result(result, |(_, _, b, _): (_, _, Bytes<PUBKEY_BYTES>, _)| b.0@.len()), SEC_BYTES@) == OptionalOrdering::Equal &&
-        cmp_if_ok(fmap_result(result, |(_, _, _, b): (_, _, _, Bytes<PUBKEY_BYTES>)| b.0@.len()), SEC_BYTES@) == OptionalOrdering::Equal
+        cmp_if_ok(fmap_result(result, |(_,b, _, _): (u32, Bytes<SEC_BYTES>, Bytes<PUBKEY_BYTES>, Bytes<PUBKEY_BYTES>)| b.0@.len()), SEC_BYTES@) == OptionalOrdering::Equal &&
+        cmp_if_ok(fmap_result(result, |(_,_, c, _): (u32, Bytes<SEC_BYTES>, Bytes<PUBKEY_BYTES>, Bytes<PUBKEY_BYTES>)| c.0@.len()), PUBKEY_BYTES@) == OptionalOrdering::Equal &&
+        cmp_if_ok(fmap_result(result, |(_,_, _, d): (u32, Bytes<SEC_BYTES>, Bytes<PUBKEY_BYTES>, Bytes<PUBKEY_BYTES>)| d.0@.len()), PUBKEY_BYTES@) == OptionalOrdering::Equal
     )]
     fn derive_when_encrypt<const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(sender_keys: &PrivateKeyBundle<PRVKEY_BYTES, PQ_PRVKEY_BYTES, SIGKEY_BYTES>, recipient_bundle: &PublicKeyBundle<PUBKEY_BYTES,PQ_PUBKEY_BYTES,SIGN_BYTES>) -> Result<(u32, Bytes<SEC_BYTES>, Bytes<PUBKEY_BYTES>, Bytes<PUBKEY_BYTES>)>; // (opk_id, classic_dh_secrets, sender_identity_key, sender_ephemeral_key)
 

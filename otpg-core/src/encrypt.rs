@@ -10,16 +10,15 @@ mod for_creusot {
     use crate::error::{Result};
     use crate::types::{CiphertextBundle, PrivateKeyBundle, PublicKeyBundle};
     use crate::cipher::{AeadCipher, KeyAgreement, PostQuantumKEM, KDF};
-    use crate::creusot_utils::{is_ok};
     
     #[requires(plaintext@.len() > 0)] // 전제 조건: 평문은 비어있지 않아야 한다.
     #[requires(recipient_bundle.one_time_prekeys@.len() > 0)] // 전제 조건: 수신자의 일회용 키는 최소 1개 이상 존재해야 한다.
-    #[ensures(is_ok(result))]
+    #[ensures(result == Ok(encrypt_spec::<NONCE_BYTES, C, PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES, PQ, KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES, KA, DERIVED_KEY_BYTES, KD, SIGKEY_BYTES, SIGN_BYTES>(sender_keys, recipient_bundle, plaintext@)))]
     /// 발신자의 개인키와 수신자의 공개키 묶음을 사용하여 메시지를 암호화합니다.
     pub fn encrypt<const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_BYTES>, const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_SEC_BYTES: usize, KA: KeyAgreement<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES>, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(
         sender_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,
         recipient_bundle: &PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>,
-        plaintext: &[u8],
+        plaintext: &[u8]
     ) -> Result<CiphertextBundle<KA_PUBKEY_BYTES,PQ_CT_BYTES,NONCE_BYTES>> {
         match encrypt_to_verify::<NONCE_BYTES, C, PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES, PQ, KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES, KA, DERIVED_KEY_BYTES, KD, SIGKEY_BYTES, SIGN_BYTES>(sender_keys, recipient_bundle, plaintext) {
             Ok((cb, _)) => Ok(cb),
@@ -30,7 +29,7 @@ mod for_creusot {
     pub(crate) fn encrypt_to_verify<const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_BYTES>, const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_SEC_BYTES: usize, KA: KeyAgreement<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES>, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(
         sender_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,
         recipient_bundle: &PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>,
-        plaintext: &[u8],
+        plaintext: &[u8]
     ) -> Result<(CiphertextBundle<KA_PUBKEY_BYTES,PQ_CT_BYTES,NONCE_BYTES>, Vec<u8>)> {
         let (opk_id, classic_dh_secrets, sender_identity_key, sender_ephemeral_key) = 
             KA::derive_when_encrypt(sender_keys, recipient_bundle)?;
@@ -58,6 +57,15 @@ mod for_creusot {
             pq_ciphertext,
             aead_ciphertext: bytes_concat![nonce.0, aead_ciphertext]
         }, master_secret))
+    }
+
+    #[logic(opaque)]
+    pub fn encrypt_spec<const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_BYTES>, const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_SEC_BYTES: usize, KA: KeyAgreement<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES>, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize>(
+        _sender_keys: &PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,
+        _recipient_bundle: &PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>,
+        _plaintext: Seq<u8>
+    ) -> CiphertextBundle<KA_PUBKEY_BYTES,PQ_CT_BYTES,NONCE_BYTES> {
+        dead
     }
 }
 
@@ -105,8 +113,10 @@ mod not_for_creusot {
 }
 
 #[cfg(creusot)]
-pub use for_creusot::encrypt;
+pub(crate) use for_creusot::encrypt;
 #[cfg(creusot)]
 pub(crate) use for_creusot::encrypt_to_verify;
+#[cfg(creusot)]
+pub use for_creusot::encrypt_spec;
 #[cfg(not(creusot))]
-pub use not_for_creusot::encrypt;
+pub(crate) use not_for_creusot::encrypt;

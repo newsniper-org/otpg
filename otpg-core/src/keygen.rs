@@ -1,5 +1,6 @@
 // src/keygen.rs
 
+use creusot_contracts::*;
 use rand::{CryptoRng};
 
 use crate::auth::OtpVerifier;
@@ -13,7 +14,13 @@ use crate::types::make_private_vault;
 
 /// OTPG를 위한 새로운 키 쌍과 개인키 저장소를 생성합니다.
 
-pub fn generate_keys<V: OtpVerifier + GetContextStr, const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_BYTES> + GetContextStr, const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_SEC_BYTES: usize, KA: KeyAgreement<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES> + OneTimePrekeysPairGen<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES> + GetContextStr, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize, S: crate::cipher::Signer<SIGKEY_BYTES, SIGN_BYTES>, R: CryptoRng + ?Sized>(num_opks: u32, rng: &mut R) -> Result<(PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>, PrivateKeyVault<NONCE_BYTES>)> {
+#[ensures(
+    match result {
+        Ok((public_bundle, private_vault)) => is_correct_bundle_pair(&public_bundle, &private_vault),
+        Err(_) => false
+    }
+)]
+pub(crate) fn generate_keys<V: OtpVerifier + GetContextStr, const NONCE_BYTES: usize, C: AeadCipher<DERIVED_KEY_BYTES, NONCE_BYTES> + GetContextStr, const PQ_PUBKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const PQ_SEC_BYTES: usize, const PQ_CT_BYTES: usize, PQ: PostQuantumKEM<PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES>, const KA_PUBKEY_BYTES: usize, const KA_PRVKEY_BYTES: usize, const KA_SEC_BYTES: usize, KA: KeyAgreement<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES> + OneTimePrekeysPairGen<KA_PUBKEY_BYTES, KA_PRVKEY_BYTES>, const DERIVED_KEY_BYTES: usize, KD: KDF<DERIVED_KEY_BYTES> + GetContextStr, const SIGKEY_BYTES: usize, const SIGN_BYTES: usize, S: crate::cipher::Signer<SIGKEY_BYTES, SIGN_BYTES>, R: CryptoRng + ?Sized>(num_opks: u32, rng: &mut R) -> Result<(PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>, PrivateKeyVault<NONCE_BYTES>)> {
     // 장기 신원 키 (IK_KX)
     let (ik_kx_pk_bytes, ik_kx_sk_bytes) = KA::generate_keypair();
     let (ik_pq_pk, ik_pq_sk) = PQ::generate_keypair();
@@ -63,4 +70,13 @@ pub fn generate_keys<V: OtpVerifier + GetContextStr, const NONCE_BYTES: usize, C
 
     // --- 6. 결과 반환 ---
     Ok((public_bundle, private_vault))
+}
+
+#[logic(opaque)]
+pub fn is_correct_bundle_pair<
+    const NONCE_BYTES: usize, const PQ_PUBKEY_BYTES: usize, const KA_PUBKEY_BYTES: usize, const SIGN_BYTES: usize
+> (
+    _pub_bundle: &PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>, _prv_vault: &PrivateKeyVault<NONCE_BYTES>
+) -> bool {
+    dead
 }

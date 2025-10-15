@@ -183,7 +183,16 @@ pub trait KeyPairGen<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize> {
         result.0.0@.len() == PUBKEY_BYTES@ &&
         result.1.0@.len() == PRVKEY_BYTES@
     )]
+    #[ensures({
+        let (pubkey, prvkey) = result;
+        Self::is_correct_pair(&pubkey, &prvkey)
+    })]
     fn generate_keypair() -> (Bytes<PUBKEY_BYTES>, Bytes<PRVKEY_BYTES>); // (public_key, private_key)
+    
+    #[logic(opaque)]
+    fn is_correct_pair(_pubkey: &Bytes<PUBKEY_BYTES>, _prvkey: &Bytes<PRVKEY_BYTES>) -> bool {
+        dead
+    }
 }
 
 pub trait OneTimePrekeysPairGen<const PUBKEY_BYTES: usize, const PRVKEY_BYTES: usize> : KeyPairGen<PUBKEY_BYTES, PRVKEY_BYTES> {

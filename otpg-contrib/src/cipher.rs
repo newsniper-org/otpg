@@ -10,7 +10,7 @@ use ed448_goldilocks::SigningKey;
 use openssl::derive::Deriver;
 use openssl::pkey::{Id, PKey};
 use otpg_core::cipher::{AeadCipher, HasNonceLength, KeyAgreement, KeyPairGen, OneTimePrekeysPairGen, PostQuantumKEM, Signer, KDF};
-use otpg_core::constants::{XCHACHA20_NONCE_LEN, XCHACHA20_KEY_LEN};
+use otpg_core::constants::{XCHACHA20_NONCE_BYTES, XCHACHA20_KEY_BYTES};
 use otpg_core::error::{OtpgError, Result};
 use otpg_core::types::{Bytes, GetContextStr, PrivateKeyBundle, PublicKeyBundle};
 
@@ -29,12 +29,12 @@ use chacha20::{
 // `chacha20poly1305`를 사용한 실제 구현체를 만듭니다.
 pub struct XChaCha20Poly1305Cipher;
 
-impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cipher {
+impl AeadCipher<XCHACHA20_KEY_BYTES, XCHACHA20_NONCE_BYTES> for XChaCha20Poly1305Cipher {
     
     #[trusted]
-    fn encrypt_aead(key: &[u8; 32], plaintext: &[u8], associated_data: &[u8]) -> Result<(otpg_core::types::Bytes<XCHACHA20_NONCE_LEN>, Vec<u8>)> {
+    fn encrypt_aead(key: &[u8; 32], plaintext: &[u8], associated_data: &[u8]) -> Result<(otpg_core::types::Bytes<XCHACHA20_NONCE_BYTES>, Vec<u8>)> {
         let cipher = XChaCha20Poly1305::new(key.into());
-        let mut nonce_bytes = [0u8; XCHACHA20_NONCE_LEN];
+        let mut nonce_bytes = [0u8; XCHACHA20_NONCE_BYTES];
         rand::fill(&mut nonce_bytes);
 
         let payload = Payload { msg: plaintext, aad: associated_data };
@@ -46,7 +46,7 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
     }
 
     #[trusted]
-    fn decrypt(key: &[u8; 32], nonce: &[u8; XCHACHA20_NONCE_LEN], ciphertext: &[u8]) -> Vec<u8> {
+    fn decrypt(key: &[u8; 32], nonce: &[u8; XCHACHA20_NONCE_BYTES], ciphertext: &[u8]) -> Vec<u8> {
         let mut cipher = <XChaCha20 as KeyIvInit>::new(&(*key).into(), &(*nonce).into());
 
         let plaintext = {
@@ -61,7 +61,7 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
     #[trusted]
     fn decrypt_aead(key: &[u8; 32], nonce_and_ciphertext: &[u8], associated_data: &[u8]) -> Result<Vec<u8>> {
         let cipher = XChaCha20Poly1305::new(key.into());
-        let (tmp_nonce, ciphertext) = nonce_and_ciphertext.split_at(XCHACHA20_NONCE_LEN);
+        let (tmp_nonce, ciphertext) = nonce_and_ciphertext.split_at(XCHACHA20_NONCE_BYTES);
         let mut nonce: Array::<u8, U24> = Array::default();
         nonce.clone_from_slice(tmp_nonce);
 
@@ -75,7 +75,7 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
     
     
     #[trusted]
-    fn encrypt(key: &[u8; 32], nonce: &[u8; XCHACHA20_NONCE_LEN], plaintext: &[u8]) -> Vec<u8> {
+    fn encrypt(key: &[u8; 32], nonce: &[u8; XCHACHA20_NONCE_BYTES], plaintext: &[u8]) -> Vec<u8> {
         let mut cipher = <XChaCha20 as KeyIvInit>::new(key.into(), nonce.into());
 
         let ciphertext = {
@@ -89,23 +89,23 @@ impl AeadCipher<XCHACHA20_KEY_LEN, XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cip
     
 
     #[trusted]
-    fn gen_nonce<R: rand::CryptoRng + ?Sized>(rng: &mut R) -> [u8; XCHACHA20_NONCE_LEN] {
+    fn gen_nonce<R: rand::CryptoRng + ?Sized>(rng: &mut R) -> [u8; XCHACHA20_NONCE_BYTES] {
         crate::gen_bytearr(rng)
     }
     
 }
 
-impl const HasNonceLength<XCHACHA20_NONCE_LEN> for XChaCha20Poly1305Cipher {
+impl const HasNonceLength<XCHACHA20_NONCE_BYTES> for XChaCha20Poly1305Cipher {
     #[trusted]
     fn too_short_for_nonce(input: &[u8]) -> bool {
-        input.len() <= XCHACHA20_NONCE_LEN
+        input.len() <= XCHACHA20_NONCE_BYTES
     }
 
     #[logic]
     #[trusted]
     fn too_short_for_nonce_creusot(input: Seq<u8>) -> bool {
         pearlite! {
-            input.len() <= XCHACHA20_NONCE_LEN@
+            input.len() <= XCHACHA20_NONCE_BYTES@
         }
     }
 }
@@ -275,10 +275,10 @@ impl const GetContextStr for BLAKE3KDF {
 
 
 
-pub struct ED448Signer;
+pub struct Ed448Signer;
 
 
-impl Signer<57,114> for ED448Signer {
+impl Signer<57,114> for Ed448Signer {
     #[trusted]
     fn sign<R: rand::CryptoRng + ?Sized>(msg: &[u8], rng: &mut R) -> (Bytes<57>, Bytes<114>) {
         let ik_sig = SigningKey::generate(rng);

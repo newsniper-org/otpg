@@ -1,8 +1,8 @@
 
 
-use creusot_contracts::requires;
+use creusot_contracts::{pearlite, requires};
 #[allow(unused_imports)]
-use creusot_contracts::{prelude::DeepModel, Seq, prelude::logic, prelude::trusted, prelude::ensures};
+use creusot_contracts::{prelude::DeepModel, Seq, prelude::logic, prelude::trusted, prelude::ensures, prelude::View};
 
 
 #[cfg(not(creusot))]
@@ -11,16 +11,97 @@ use serde::{Deserialize, Serialize};
 use crate::auth::OtpVerifier;
 use crate::cipher::{AeadCipher, KDF};
 use crate::creusot_utils::{concat, concat_mat};
-
+use crate::optional_serde_derive;
 
 pub const trait GetContextStr {
     fn get_context_str() -> &'static str;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, DeepModel)]
-pub struct Bytes<const LEN: usize>(
-    pub [u8; LEN]
-);
+
+optional_serde_derive! {
+    not(creusot);
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, DeepModel)]
+    pub struct Bytes<const LEN: usize>(
+        #[cfg_attr(not(creusot), serde(with = "serde_arrays"))]
+        pub [u8; LEN]
+    );
+
+    #[derive(Clone)]
+    pub struct SignedPreKey<const PUBKEY_BYTES: usize, const SIGN_BYTES: usize>(pub Bytes<PUBKEY_BYTES>, pub Bytes<SIGN_BYTES>);
+
+    #[derive(Clone, Copy)]
+    pub struct Version(pub u32, pub u32);
+
+    #[derive(Clone)]
+    pub struct PublicKeyBundle<const KA_PUBKEY_BYTES: usize, const PQ_PUBKEY_BYTES: usize, const SIGN_BYTES: usize> {
+        pub version: Version,
+        pub identity_key: Bytes<KA_PUBKEY_BYTES>,
+        pub identity_key_pq: Bytes<PQ_PUBKEY_BYTES>,
+        pub signed_prekey: SignedPreKey<KA_PUBKEY_BYTES, SIGN_BYTES>,
+        pub one_time_prekeys: Vec<Bytes<KA_PUBKEY_BYTES>>
+    }
+
+    #[derive(Clone)]
+    pub struct AuthenticationVault {
+        pub method: String,
+        pub s_otp: Bytes<20>,
+        pub kdf_context: String
+    }
+
+    #[derive(Clone)]
+    pub struct EncryptedData<const NONCE_BYTES: usize> {
+        pub nonce: Bytes<NONCE_BYTES>,
+        pub ciphertext: Vec<u8>
+    }
+
+    #[derive(Clone)]
+    pub struct PrivateKeyVault<const NONCE_BYTES: usize> {
+        pub version: Version,
+        pub authentication: AuthenticationVault,
+        pub encrypted_data: EncryptedData<NONCE_BYTES>
+    }
+
+    // keygen 내부에서만 사용될 임시 구조체
+    pub struct PrivateKeyBundle<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize> {
+        pub identity_key_sig: Bytes<SIGKEY_BYTES>,
+        pub identity_key_kx: Bytes<KA_PRVKEY_BYTES>,
+        pub identity_key_pq: Bytes<PQ_PRVKEY_BYTES>,
+        pub signed_prekey: Bytes<KA_PRVKEY_BYTES>,
+        pub one_time_prekeys: Vec<Bytes<KA_PRVKEY_BYTES>>,
+    }
+
+
+
+    /// 암호화된 메시지와 수신자가 복호화에 필요한 모든 정보를 담는 구조체
+    pub struct CiphertextBundle<const KA_PUBKEY_BYTES: usize, const PQ_CT_BYTES: usize, const NONCE_BYTES: usize> {
+        /// 발신자의 장기 공개키 (IK_B)
+        pub sender_identity_key: Bytes<KA_PUBKEY_BYTES>,
+        /// 발신자의 임시 공개키 (EK_B)
+        pub sender_ephemeral_key: Bytes<KA_PUBKEY_BYTES>,
+        /// 수신자의 어떤 일회성 사전 키를 사용했는지 가리키는 ID
+        pub opk_id: u32,
+        /// Post-quantum KEM 암호문
+        pub pq_ciphertext: Bytes<PQ_CT_BYTES>,
+        /// AEAD cipher(예: XChaCha20-Poly1305)로 암호화된 최종 암호문
+        pub aead_ciphertext: Vec<u8>,
+    }
+
+    #[derive(Clone)]
+    pub struct LittleEndianIntermediateRepr(pub Vec<u8>);
+
+
+}
+
+impl<const LEN: usize> View for Bytes<LEN> {
+    type ViewTy = Seq<u8>;
+
+    #[logic]
+    fn view(self) -> Self::ViewTy {
+        pearlite! {
+            self.0@
+        }
+    }
+}
 
 impl<const LEN: usize> Bytes<LEN> {
     #[trusted]
@@ -44,73 +125,13 @@ impl<const LEN: usize> Default for Bytes<LEN> {
 }
 
 
-#[derive(Clone)]
-pub struct SignedPreKey<const PUBKEY_BYTES: usize, const SIGN_BYTES: usize>(pub Bytes<PUBKEY_BYTES>, pub Bytes<SIGN_BYTES>);
 
-#[derive(Clone, Copy)]
-pub struct Version(pub u32, pub u32);
-
-#[derive(Clone)]
-pub struct PublicKeyBundle<const KA_PUBKEY_BYTES: usize, const PQ_PUBKEY_BYTES: usize, const SIGN_BYTES: usize> {
-    pub version: Version,
-    pub identity_key: Bytes<KA_PUBKEY_BYTES>,
-    pub identity_key_pq: Bytes<PQ_PUBKEY_BYTES>,
-    pub signed_prekey: SignedPreKey<KA_PUBKEY_BYTES, SIGN_BYTES>,
-    pub one_time_prekeys: Vec<Bytes<KA_PUBKEY_BYTES>>
-}
-
-#[derive(Clone)]
-pub struct AuthenticationVault {
-    pub method: String,
-    pub s_otp: Bytes<20>,
-    pub kdf_context: String
-}
-
-#[derive(Clone)]
-pub struct EncryptedData<const NONCE_BYTES: usize> {
-    pub nonce: Bytes<NONCE_BYTES>,
-    pub ciphertext: Vec<u8>
-}
-
-#[derive(Clone)]
-pub struct PrivateKeyVault<const NONCE_BYTES: usize> {
-    pub version: Version,
-    pub authentication: AuthenticationVault,
-    pub encrypted_data: EncryptedData<NONCE_BYTES>
-}
-
-// keygen 내부에서만 사용될 임시 구조체
-pub struct PrivateKeyBundle<const KA_PRVKEY_BYTES: usize, const PQ_PRVKEY_BYTES: usize, const SIGKEY_BYTES: usize> {
-    pub identity_key_sig: Bytes<SIGKEY_BYTES>,
-    pub identity_key_kx: Bytes<KA_PRVKEY_BYTES>,
-    pub identity_key_pq: Bytes<PQ_PRVKEY_BYTES>,
-    pub signed_prekey: Bytes<KA_PRVKEY_BYTES>,
-    pub one_time_prekeys: Vec<Bytes<KA_PRVKEY_BYTES>>,
-}
-
-
-
-/// 암호화된 메시지와 수신자가 복호화에 필요한 모든 정보를 담는 구조체
-pub struct CiphertextBundle<const KA_PUBKEY_BYTES: usize, const PQ_CT_BYTES: usize, const NONCE_BYTES: usize> {
-    /// 발신자의 장기 공개키 (IK_B)
-    pub sender_identity_key: Bytes<KA_PUBKEY_BYTES>,
-    /// 발신자의 임시 공개키 (EK_B)
-    pub sender_ephemeral_key: Bytes<KA_PUBKEY_BYTES>,
-    /// 수신자의 어떤 일회성 사전 키를 사용했는지 가리키는 ID
-    pub opk_id: u32,
-    /// Post-quantum KEM 암호문
-    pub pq_ciphertext: Bytes<PQ_CT_BYTES>,
-    /// AEAD cipher(예: XChaCha20-Poly1305)로 암호화된 최종 암호문
-    pub aead_ciphertext: Vec<u8>,
-}
 
 // src/constants.rs 에 Kyber 암호문 길이 상수 추가
-pub const KYBER1024_CIPHERTEXT_LEN: usize = 1568;
+pub const KYBER1024_CIPHERTEXT_BYTES: usize = 1568;
 
 
-#[cfg_attr(not(creusot), derive(Serialize, Deserialize))]
-#[derive(Clone)]
-pub struct LittleEndianIntermediateRepr(pub Vec<u8>);
+
 
 impl LittleEndianIntermediateRepr {
     #[trusted]

@@ -38,8 +38,8 @@ pub trait Law<
     const DERIVED_KEY_BYTES: usize, KD: cipher::KDF<DERIVED_KEY_BYTES>,
     const SIGKEY_BYTES: usize, const SIGN_BYTES: usize, S: cipher::Signer<SIGKEY_BYTES, SIGN_BYTES>
 > {
-    #[logic(law)]
-    fn decryptable_only_with_correct_private_key();
+    #[logic]
+    fn roundtrip_lemma();
 }
 
 pub struct OtpgWrapper<
@@ -71,10 +71,10 @@ impl<
     KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES, KA,
     DERIVED_KEY_BYTES, KD,SIGKEY_BYTES, SIGN_BYTES, S
 > {
-    #[logic(law)]
-    fn decryptable_only_with_correct_private_key() {
+    #[logic]
+    fn roundtrip_lemma() {
         proof_assert! {
-            forall<recv_pub_bundle: types::PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>> forall <recv_prv_vault: types::PrivateKeyVault<NONCE_BYTES>> forall <send_prv_bundle: types::PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>> forall <plaintext: Seq<u8>> forall<current_timestamp: u64> exists<otp_code: &str> {
+            forall<recv_pub_bundle: types::PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>> forall <recv_prv_vault: types::PrivateKeyVault<NONCE_BYTES>> forall <send_prv_bundle: types::PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>> forall <plaintext: Seq<u8>> forall<current_timestamp: u64> forall<otp_code: &str> {
                 let is_cbp = crate::keygen::is_correct_bundle_pair(&recv_pub_bundle, &recv_prv_vault);
                 let ciphertext_bundle = encrypt::encrypt_spec::<NONCE_BYTES, C, PQ_PUBKEY_BYTES, PQ_PRVKEY_BYTES, PQ_SEC_BYTES, PQ_CT_BYTES, PQ, KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES, KA, DERIVED_KEY_BYTES, KD, SIGKEY_BYTES, SIGN_BYTES>(&send_prv_bundle, &recv_pub_bundle, plaintext);
 

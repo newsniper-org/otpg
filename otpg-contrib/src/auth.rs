@@ -1,6 +1,7 @@
+use creusot_contracts::macros::{trusted, requires};
 use otpg_core::{auth::OtpVerifier, types::GetContextStr};
 
-use creusot_contracts::{requires, trusted};
+
 
 pub struct TotpRsVerifier;
 

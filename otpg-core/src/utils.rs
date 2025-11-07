@@ -1,4 +1,4 @@
-use creusot_contracts::{trusted};
+use creusot_contracts::macros::trusted;
 
 
 #[trusted]

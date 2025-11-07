@@ -1,8 +1,9 @@
 
 
-use creusot_contracts::{pearlite, requires};
+use creusot_contracts::logic::Seq;
+use creusot_contracts::macros::requires;
 #[allow(unused_imports)]
-use creusot_contracts::{prelude::DeepModel, Seq, prelude::logic, prelude::trusted, prelude::ensures, prelude::View};
+use creusot_contracts::{prelude::DeepModel, prelude::logic, prelude::trusted, prelude::ensures, prelude::View};
 
 
 #[cfg(not(creusot))]

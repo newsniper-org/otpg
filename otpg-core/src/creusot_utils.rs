@@ -1,4 +1,6 @@
-use creusot_contracts::*;
+use creusot_contracts::{logic::{Int, Mapping, OrdLogic, Seq}, macros::{ensures, logic, trusted}};
+
+
 
 
 #[logic]
@@ -18,7 +20,7 @@ pub fn eq_if_ok<T: PartialEq, E>(a: Result<T, E>, b: T) -> bool {
 }
 
 #[logic]
-pub fn select_left_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: logic::Mapping<A, C>) -> Result<C, E> {
+pub fn select_left_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: Mapping<A, C>) -> Result<C, E> {
     match r {
         Ok((a, _)) => Ok(f.get(a)),
         Err(e) => Err(e)
@@ -26,7 +28,7 @@ pub fn select_left_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: logic::Mapping<A, 
 }
 
 #[logic]
-pub fn select_right_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: logic::Mapping<B, C>) -> Result<C, E> {
+pub fn select_right_if_ok<A, B, C, E>(r: Result<(A, B), E>, f: Mapping<B, C>) -> Result<C, E> {
     match r {
         Ok((_, b)) => Ok(f.get(b)),
         Err(e) => Err(e)
@@ -68,7 +70,7 @@ const fn greater_than_zero_length<T>(v: Seq<T>) -> bool {
 }
 
 #[logic]
-pub const fn fmap_result<A, B, E>(input: Result<A, E>, fmap: logic::Mapping<A, B>) -> Result<B, E> {
+pub const fn fmap_result<A, B, E>(input: Result<A, E>, fmap: Mapping<A, B>) -> Result<B, E> {
     match input {
         Ok(a) => Ok(fmap.get(a)),
         Err(e) => Err(e)

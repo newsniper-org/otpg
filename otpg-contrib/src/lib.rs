@@ -1,6 +1,6 @@
 #![feature(const_trait_impl)]
 
-use creusot_contracts::trusted;
+use creusot_contracts::macros::trusted;
 use rand::Fill;
 
 use crate::cipher::{Ed448Signer, Kyber1024KEM, X448KeyAgreement, XChaCha20Poly1305Cipher, BLAKE3KDF};

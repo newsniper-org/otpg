@@ -19,11 +19,14 @@ pub(crate) mod utils;
 pub mod creusot_utils;
 
 #[cfg(creusot)]
+use creusot_contracts::logic::Seq;
+
+#[cfg(creusot)]
 pub mod proofs;
 
 
 
-use creusot_contracts::*;
+use creusot_contracts::{macros::logic};
 use rand::CryptoRng;
 
 use crate::cipher::OneTimePrekeysPairGen;

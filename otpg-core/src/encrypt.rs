@@ -4,7 +4,8 @@
 
 #[cfg(creusot)]
 mod for_creusot {
-    use creusot_contracts::*;
+    use creusot_contracts::logic::Seq;
+    use creusot_contracts::macros::{ensures, logic, requires};
 
     use crate::bytes_concat;
     use crate::error::{Result};

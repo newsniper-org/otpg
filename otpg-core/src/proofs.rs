@@ -1,11 +1,12 @@
 use crate::{encrypt::*, decrypt::*};
 use crate::types::*;
-use creusot_contracts::*;
 use crate::cipher::*;
 use crate::auth::*;
 use crate::error::*;
 
 use totp_rs::*;
+
+use creusot_contracts::macros::{ensures, trusted, requires};
 
 #[trusted]
 fn generate_valid_otp(s_otp: &[u8; 20]) -> String {

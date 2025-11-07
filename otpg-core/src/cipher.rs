@@ -1,6 +1,6 @@
-use creusot_contracts::{ensures, logic, proof_assert, requires, trusted, seq};
+use creusot_contracts::{macros::{ensures, logic, requires, trusted}};
 #[cfg(creusot)]
-use creusot_contracts:: Seq;
+use creusot_contracts::logic::Seq;
 
 use rand::CryptoRng;
 

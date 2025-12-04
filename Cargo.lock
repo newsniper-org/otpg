@@ -477,6 +477,7 @@ dependencies = [
 [[package]]
 name = "creusot-contracts"
 version = "0.7.0"
+source = "git+https://github.com/creusot-rs/creusot#3e78e095327563fd12fe32c8c5fbf2f1644709fe"
 dependencies = [
  "creusot-contracts-proc",
  "num-rational",
@@ -485,6 +486,7 @@ dependencies = [
 [[package]]
 name = "creusot-contracts-proc"
 version = "0.7.0"
+source = "git+https://github.com/creusot-rs/creusot#3e78e095327563fd12fe32c8c5fbf2f1644709fe"
 dependencies = [
  "proc-macro2",
  "quote",

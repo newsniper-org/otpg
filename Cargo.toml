@@ -26,5 +26,5 @@ creusot-contracts = { version = "0.7.0-dev"}
 chacha20 = { version = "0.10.0-rc.5", features = ["rand_core", "rng", "xchacha", "zeroize"] }
 
 [patch.crates-io]
-creusot-contracts = { path = "/home/yeun/creusot/creusot-contracts" }
+creusot-contracts = { git = "https://github.com/creusot-rs/creusot" }
 ed448-goldilocks = { git = "https://github.com/RustCrypto/elliptic-curves" }

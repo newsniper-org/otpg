@@ -18,7 +18,7 @@ crypt_guard = "1.4.2"
 signature = { version = "3.0.0-rc.5", features = ["rand_core", "digest"] }
 thiserror = "2.0.17"
 bincode = "2.0.1"
-elliptic-curve = { version = "0.13.8", features = ["digest", "ecdh"] }
+elliptic-curve = { version = "0.14.0-rc.17", features = ["digest", "ecdh"] }
 openssl = { version = "0.10.73", features = ["bindgen"] }
 totp-rs = { version = "5.7.0", features = ["zeroize", "rand", "gen_secret"] }
 chrono = "0.4.42"

@@ -37,11 +37,11 @@ RUN ulimit -s unlimited && git clone https://github.com/creusot-rs/creusot/ \
 
 WORKDIR /home/opam
 RUN ulimit -s unlimited && eval $(opam env) && git clone https://github.com/creusot-rs/creusot-ide \
-    && opam pin creusot-lsp creusot-ide/ -y
+    && cd creusot-ide && opam pin creusot-lsp . -y
 
 # 7. 작업 디렉터리 설정
 WORKDIR /home/opam/workspaces/otpg
-RUN rustup override set nightly-2025-10-01
+RUN rustup override set nightly-2025-11-13
 
 # 컨테이너가 종료되지 않도록 유지
 CMD ["sleep", "infinity"]

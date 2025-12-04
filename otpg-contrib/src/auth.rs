@@ -23,7 +23,7 @@ impl OtpVerifier for TotpRsVerifier {
     }        
     
     #[trusted]
-    fn gen_s_otp<R : rand::CryptoRng + ?Sized>(rng: &mut R) -> [u8; 20] {
+    fn gen_s_otp<R : rand_core::CryptoRng + ?Sized>(rng: &mut R) -> [u8; 20] {
         crate::gen_bytearr(rng)
     }
 }

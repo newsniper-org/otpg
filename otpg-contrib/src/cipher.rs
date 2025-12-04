@@ -90,7 +90,7 @@ impl AeadCipher<XCHACHA20_KEY_BYTES, XCHACHA20_NONCE_BYTES> for XChaCha20Poly130
     
 
     #[trusted]
-    fn gen_nonce<R: rand::CryptoRng + ?Sized>(rng: &mut R) -> [u8; XCHACHA20_NONCE_BYTES] {
+    fn gen_nonce<R: rand_core::CryptoRng + ?Sized>(rng: &mut R) -> [u8; XCHACHA20_NONCE_BYTES] {
         crate::gen_bytearr(rng)
     }
     
@@ -281,7 +281,7 @@ pub struct Ed448Signer;
 
 impl Signer<57,114> for Ed448Signer {
     #[trusted]
-    fn sign<R: rand::CryptoRng + ?Sized>(msg: &[u8], rng: &mut R) -> (Bytes<57>, Bytes<114>) {
+    fn sign<R: rand_core::CryptoRng + ?Sized>(msg: &[u8], rng: &mut R) -> (Bytes<57>, Bytes<114>) {
         let ik_sig = SigningKey::generate(rng);
 
         let signature = <SigningKey as ed448_goldilocks::signature::Signer<Signature>>::sign(&ik_sig, msg);

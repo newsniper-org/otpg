@@ -1,7 +1,6 @@
 #![feature(const_trait_impl)]
 
 use creusot_contracts::macros::trusted;
-use rand::Fill;
 
 use crate::cipher::{Ed448Signer, Kyber1024KEM, X448KeyAgreement, XChaCha20Poly1305Cipher, BLAKE3KDF};
 
@@ -9,9 +8,9 @@ pub mod auth;
 pub mod cipher;
 
 #[trusted]
-pub(crate) fn gen_bytearr<R : rand::CryptoRng + ?Sized, const LEN: usize>(rng: &mut R) -> [u8; LEN] {
+pub(crate) fn gen_bytearr<R : rand_core::CryptoRng + ?Sized, const LEN: usize>(rng: &mut R) -> [u8; LEN] {
     let mut result = [0u8; LEN];
-    <[u8; LEN] as Fill>::fill(&mut result, rng);
+    rng.fill_bytes(&mut result);
     result
 }
 

@@ -17,7 +17,7 @@ blake3.workspace = true
 ed448-goldilocks.workspace = true
 ed448.workspace = true
 creusot-contracts = { workspace = true }
-chacha20 = { workspace = true, features = ["rand_core", "rng", "serde", "xchacha", "zeroize"] }
+chacha20 = { workspace = true, features = ["rand_core", "rng", "xchacha", "zeroize"] }
 hmac.workspace = true
 sha1-checked = { workspace = true }
 sha1 = "0.10.6"

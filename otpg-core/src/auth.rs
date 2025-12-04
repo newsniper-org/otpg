@@ -17,5 +17,5 @@ pub trait OtpVerifier : const GetContextStr {
     }
 
     #[ensures(result@.len() == 20)]
-    fn gen_s_otp<R : rand::CryptoRng + ?Sized>(rng: &mut R) -> [u8; 20];
+    fn gen_s_otp<R : rand_core::CryptoRng + ?Sized>(rng: &mut R) -> [u8; 20];
 }

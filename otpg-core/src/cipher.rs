@@ -2,7 +2,7 @@ use creusot_contracts::{macros::{ensures, logic, requires, trusted}};
 #[cfg(creusot)]
 use creusot_contracts::logic::Seq;
 
-use rand::CryptoRng;
+use rand_core::CryptoRng;
 
 use crate::error::Result;
 use crate::types::{Bytes, CiphertextBundle, GetContextStr, PrivateKeyBundle, PublicKeyBundle};
@@ -225,5 +225,5 @@ pub trait Signer<const SIGKEY_BYTES: usize, const SIGN_BYTES: usize> {
         result.0.0@.len() == SIGKEY_BYTES@ &&
         result.1.0@.len() == SIGN_BYTES@
     )]
-    fn sign<R: CryptoRng + ?Sized>(msg: &[u8], rng: &mut R) -> (Bytes<SIGKEY_BYTES>, Bytes<SIGN_BYTES>); // (identity_key_sig, signature)
+    fn sign<R: rand_core::CryptoRng + ?Sized>(msg: &[u8], rng: &mut R) -> (Bytes<SIGKEY_BYTES>, Bytes<SIGN_BYTES>); // (identity_key_sig, signature)
 }

@@ -27,7 +27,7 @@ pub mod proofs;
 
 
 use creusot_contracts::{macros::logic};
-use rand::CryptoRng;
+use rand_core::CryptoRng;
 
 use crate::cipher::OneTimePrekeysPairGen;
 

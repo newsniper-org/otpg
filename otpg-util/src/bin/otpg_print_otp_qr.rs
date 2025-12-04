@@ -45,7 +45,7 @@ fn print_otp_qr(params_raw: Args) -> Option<String> {
 
                 let svg = qr.render::<svg::Color>().build();
                 let dest = dir.join(format!("qr_{}.svg", keyname));
-                std::fs::write(dest.clone, svg).unwrap();
+                std::fs::write(dest.clone(), svg).unwrap();
                 return Some(format!("The QR code SVG file is generated at {:?}", dest));                        
             } else {
                 return None;

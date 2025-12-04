@@ -28,3 +28,4 @@ chacha20 = { version = "0.10.0-rc.5", features = ["rand_core", "rng", "xchacha",
 [patch.crates-io]
 creusot-contracts = { git = "https://github.com/creusot-rs/creusot" }
 ed448-goldilocks = { git = "https://github.com/RustCrypto/elliptic-curves" }
+totp-rs = { git = "https://github.com/newsniper-org/totp-rs", branch = "vwallet-compat"}

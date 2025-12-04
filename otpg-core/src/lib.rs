@@ -115,6 +115,10 @@ impl<
     KA_PUBKEY_BYTES, KA_PRVKEY_BYTES, KA_SEC_BYTES, KA,
     DERIVED_KEY_BYTES, KD,SIGKEY_BYTES, SIGN_BYTES, S
 > {
+    pub fn verify(code: &str, s_otp: &[u8], timestamp: u64) -> bool {
+        V::verify(code, s_otp, timestamp)
+    }
+
     pub fn encrypt(
         sender_keys: &types::PrivateKeyBundle<KA_PRVKEY_BYTES,PQ_PRVKEY_BYTES,SIGKEY_BYTES>,
         recipient_bundle: &types::PublicKeyBundle<KA_PUBKEY_BYTES, PQ_PUBKEY_BYTES, SIGN_BYTES>,

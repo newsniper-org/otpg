@@ -1,0 +1,17 @@
+[package]
+name = "otpg-util"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand.workspace = true
+otpg-contrib = { path = "../otpg-contrib" }
+otpg-core = { path = "../otpg-core" }
+anyhow = "1.0.100"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.145", features = ["std"]}
+qrcode = { version = "0.14.1", features = ["svg"] }
+data-encoding = "2.9.0"
+chrono.workspace = true
+blake3.workspace = true
+chacha20.workspace = true

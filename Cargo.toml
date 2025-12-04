@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["otpg-core", "otpg-contrib", "otpg-test"]
+members = ["otpg-core", "otpg-contrib", "otpg-test", "otpg-util"]
 
 [workspace.dependencies]
 blake3 = { version = "1.8.2", features = ["digest", "pure", "zeroize"] }
